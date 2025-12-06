@@ -330,6 +330,158 @@ components:
         details:
           type: object
 
+    # --- Paymob Schemas ---
+    PaymobTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Paymob transaction ID
+        pending:
+          type: boolean
+        amount_cents:
+          type: integer
+        success:
+          type: boolean
+        is_auth:
+          type: boolean
+        is_capture:
+          type: boolean
+        is_standalone_payment:
+          type: boolean
+        is_voided:
+          type: boolean
+        is_refunded:
+          type: boolean
+        is_3d_secure:
+          type: boolean
+        integration_id:
+          type: integer
+        profile_id:
+          type: integer
+        has_parent_transaction:
+          type: boolean
+        order:
+          type: object
+          properties:
+            id:
+              type: integer
+            created_at:
+              type: string
+            delivery_needed:
+              type: boolean
+            merchant:
+              type: object
+            amount_cents:
+              type: integer
+            shipping_data:
+              type: object
+            currency:
+              type: string
+            is_payment_locked:
+              type: boolean
+            merchant_order_id:
+              type: string
+              description: Your order ID
+            items:
+              type: array
+              items:
+                type: object
+        created_at:
+          type: string
+          format: date-time
+        currency:
+          type: string
+        source_data:
+          type: object
+          properties:
+            type:
+              type: string
+            pan:
+              type: string
+            sub_type:
+              type: string
+        api_source:
+          type: string
+        terminal_id:
+          type: string
+        merchant_commission:
+          type: integer
+        installment:
+          type: string
+        discount_details:
+          type: array
+          items:
+            type: object
+        is_void:
+          type: boolean
+        is_refund:
+          type: boolean
+        data:
+          type: object
+          properties:
+            klass:
+              type: string
+            gateway_integration_pk:
+              type: integer
+            merchant:
+              type: string
+            amount:
+              type: integer
+            currency:
+              type: string
+            message:
+              type: string
+            merchant_txn_ref:
+              type: string
+            txn_response_code:
+              type: string
+        is_hidden:
+          type: boolean
+        payment_key_claims:
+          type: object
+          properties:
+            user_id:
+              type: integer
+            amount_cents:
+              type: integer
+            currency:
+              type: string
+            integration_id:
+              type: integer
+            billing_data:
+              type: object
+        error_occured:
+          type: boolean
+        is_live:
+          type: boolean
+        other_endpoint_reference:
+          type: string
+        refunded_amount_cents:
+          type: integer
+        source_id:
+          type: integer
+        is_captured:
+          type: boolean
+        captured_amount:
+          type: integer
+        merchant_staff_tag:
+          type: string
+        owner:
+          type: integer
+        parent_transaction:
+          type: string
+
+    PaymobCallback:
+      type: object
+      description: Paymob Transaction Processed Callback Schema
+      properties:
+        obj:
+          $ref: '#/components/schemas/PaymobTransaction'
+        type:
+          type: string
+          enum: [TRANSACTION, TOKEN]
+
 security:
   - Auth0Bearer: []
 
@@ -1678,158 +1830,23 @@ paths:
       summary: Paymob payment callback webhook
       tags:
         - Orders
-      description: Webhook endpoint for Paymob payment notifications (transaction processed, accepted, voided, refunded)
+      description: |
+        Webhook endpoint for Paymob payment notifications.
+        Validates the HMAC signature to ensure the request is from Paymob.
       security: []
+      parameters:
+        - name: hmac
+          in: query
+          required: true
+          schema:
+            type: string
+          description: HMAC signature for validating the request body
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                obj:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                      description: Paymob transaction ID
-                    pending:
-                      type: boolean
-                    amount_cents:
-                      type: integer
-                    success:
-                      type: boolean
-                    is_auth:
-                      type: boolean
-                    is_capture:
-                      type: boolean
-                    is_standalone_payment:
-                      type: boolean
-                    is_voided:
-                      type: boolean
-                    is_refunded:
-                      type: boolean
-                    is_3d_secure:
-                      type: boolean
-                    integration_id:
-                      type: integer
-                    profile_id:
-                      type: integer
-                    has_parent_transaction:
-                      type: boolean
-                    order:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        created_at:
-                          type: string
-                        delivery_needed:
-                          type: boolean
-                        merchant:
-                          type: object
-                        amount_cents:
-                          type: integer
-                        shipping_data:
-                          type: object
-                        currency:
-                          type: string
-                        is_payment_locked:
-                          type: boolean
-                        merchant_order_id:
-                          type: string
-                          description: Your order ID
-                        items:
-                          type: array
-                          items:
-                            type: object
-                    created_at:
-                      type: string
-                      format: date-time
-                    currency:
-                      type: string
-                    source_data:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                        pan:
-                          type: string
-                        sub_type:
-                          type: string
-                    api_source:
-                      type: string
-                    terminal_id:
-                      type: string
-                    merchant_commission:
-                      type: integer
-                    installment:
-                      type: string
-                    discount_details:
-                      type: array
-                      items:
-                        type: object
-                    is_void:
-                      type: boolean
-                    is_refund:
-                      type: boolean
-                    data:
-                      type: object
-                      properties:
-                        klass:
-                          type: string
-                        gateway_integration_pk:
-                          type: integer
-                        merchant:
-                          type: string
-                        amount:
-                          type: integer
-                        currency:
-                          type: string
-                        message:
-                          type: string
-                        merchant_txn_ref:
-                          type: string
-                        txn_response_code:
-                          type: string
-                    is_hidden:
-                      type: boolean
-                    payment_key_claims:
-                      type: object
-                      properties:
-                        user_id:
-                          type: integer
-                        amount_cents:
-                          type: integer
-                        currency:
-                          type: string
-                        integration_id:
-                          type: integer
-                        billing_data:
-                          type: object
-                    error_occured:
-                      type: boolean
-                    is_live:
-                      type: boolean
-                    other_endpoint_reference:
-                      type: string
-                    refunded_amount_cents:
-                      type: integer
-                    source_id:
-                      type: integer
-                    is_captured:
-                      type: boolean
-                    captured_amount:
-                      type: integer
-                    merchant_staff_tag:
-                      type: string
-                    owner:
-                      type: integer
-                    parent_transaction:
-                      type: string
-                type:
-                  type: string
-                  enum: [TRANSACTION, TOKEN]
+              $ref: '#/components/schemas/PaymobCallback'
       responses:
         '200':
           description: Callback processed successfully
