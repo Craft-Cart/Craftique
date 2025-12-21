@@ -1,0 +1,187 @@
+import { OrderRepository } from '../repositories/order.repository';
+import { ItemRepository } from '../repositories/item.repository';
+import { ItemService } from './item.service';
+import { NotFoundError, ValidationError } from '../utils/errors';
+import { generateOrderNumber } from '../utils/helpers';
+import { Decimal } from '@prisma/client/runtime/library';
+
+export class OrderService {
+  private orderRepository: OrderRepository;
+  private itemRepository: ItemRepository;
+  private itemService: ItemService;
+
+  constructor() {
+    this.orderRepository = new OrderRepository();
+    this.itemRepository = new ItemRepository();
+    this.itemService = new ItemService();
+  }
+
+  async getOrderById(id: string, userId?: string) {
+    const order = await this.orderRepository.findById(id);
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    // Check ownership
+    if (userId && order.user_id !== userId) {
+      throw new ValidationError('Access denied');
+    }
+
+    return order;
+  }
+
+  async getOrders(options: {
+    page?: number;
+    limit?: number;
+    userId?: string;
+    status?: string;
+  }) {
+    return this.orderRepository.findMany(options);
+  }
+
+  async createOrder(userId: string, data: {
+    items: Array<{ itemId: string; quantity: number }>;
+    shippingAddress: any;
+    billingAddress?: any;
+    notes?: string;
+  }) {
+    // Validate all items exist and are available
+    const itemIds = data.items.map(item => item.itemId);
+    const items = await this.itemRepository.findByIds(itemIds);
+
+    if (items.length !== data.items.length) {
+      throw new ValidationError('One or more items not found');
+    }
+
+    // Calculate totals (server-side calculation - never trust client)
+    let subtotal = new Decimal(0);
+    const orderItems: any[] = [];
+
+    for (const orderItem of data.items) {
+      const item = items.find(i => i.id === orderItem.itemId);
+      if (!item) {
+        throw new ValidationError(`Item ${orderItem.itemId} not found`);
+      }
+
+      // Check availability
+      if (item.quantity < orderItem.quantity) {
+        throw new ValidationError(`Insufficient quantity for item ${item.name}`);
+      }
+
+      if (!item.is_active) {
+        throw new ValidationError(`Item ${item.name} is not available`);
+      }
+
+      const itemTotal = new Decimal(item.price.toString()).mul(orderItem.quantity);
+      subtotal = subtotal.add(itemTotal);
+
+      orderItems.push({
+        item_id: item.id,
+        name: item.name,
+        quantity: orderItem.quantity,
+        price: item.price,
+        total: itemTotal,
+      });
+    }
+
+    // Calculate shipping and tax (simplified)
+    const shipping = new Decimal(50); // Fixed shipping cost
+    const tax = subtotal.mul(0.14); // 14% tax
+    const discount = new Decimal(0);
+    const total = subtotal.add(shipping).add(tax).sub(discount);
+
+    // Reserve items (decrement quantity)
+    await this.itemService.reserveItems(data.items);
+
+    // Create order
+    const orderNumber = generateOrderNumber();
+    
+    const order = await this.orderRepository.create({
+      order_number: orderNumber,
+      user: {
+        connect: { id: userId },
+      },
+      status: 'pending',
+      items: orderItems, // Store as JSON snapshot
+      subtotal,
+      tax,
+      shipping,
+      discount,
+      total,
+      currency: 'EGP',
+      shipping_address: data.shippingAddress,
+      billing_address: data.billingAddress || data.shippingAddress,
+      payment_status: 'pending',
+      notes: data.notes,
+    });
+
+    // Create order items for relational queries
+    const orderItemsData = orderItems.map(oi => ({
+      order_id: order.id,
+      item_id: oi.item_id,
+      name: oi.name,
+      quantity: oi.quantity,
+      price: oi.price,
+      total: oi.total,
+    }));
+
+    // Note: In a real implementation, you'd use Prisma's nested create
+    // This is simplified for clarity
+
+    return order;
+  }
+
+  async updateOrder(id: string, data: {
+    status?: string;
+    notes?: string;
+  }, userRole: string) {
+    const order = await this.orderRepository.findById(id);
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    // Only admin/moderator can update order status
+    if (data.status && userRole !== 'admin' && userRole !== 'moderator') {
+      throw new ValidationError('Only admins can update order status');
+    }
+
+    return this.orderRepository.update(id, {
+      status: data.status as any,
+      notes: data.notes,
+    });
+  }
+
+  async cancelOrder(id: string, userId: string) {
+    const order = await this.orderRepository.findById(id);
+    if (!order) {
+      throw new NotFoundError('Order');
+    }
+
+    // Check ownership
+    if (order.user_id !== userId) {
+      throw new ValidationError('Access denied');
+    }
+
+    // Only pending orders can be cancelled
+    if (order.status !== 'pending') {
+      throw new ValidationError('Only pending orders can be cancelled');
+    }
+
+    return this.orderRepository.update(id, {
+      status: 'cancelled',
+    });
+  }
+
+  async updatePaymentStatus(
+    id: string,
+    paymentStatus: string,
+    paymobData?: {
+      paymobOrderId?: string;
+      paymobTransactionId?: number;
+      paymobIntegrationId?: number;
+    }
+  ) {
+    return this.orderRepository.updatePaymentStatus(id, paymentStatus, paymobData);
+  }
+}
+
