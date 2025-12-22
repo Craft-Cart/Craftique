@@ -2,62 +2,76 @@ import { API_ENDPOINTS } from "@/lib/endpoints"
 import type { Product, Category, PaginatedResponse, ProductFilters } from "@/lib/types"
 
 export class CatalogService {
+  private static getAuthHeaders(): HeadersInit {
+    // Cookies are automatically sent with credentials: 'include'
+    return {
+      "Content-Type": "application/json",
+    }
+  }
+
   static async getProducts(filters?: ProductFilters): Promise<PaginatedResponse<Product>> {
     const params = new URLSearchParams()
 
     if (filters?.page) params.append("page", filters.page.toString())
     if (filters?.limit) params.append("limit", filters.limit.toString())
-    if (filters?.category) params.append("category", filters.category)
+    if (filters?.category) params.append("category_id", filters.category)
     if (filters?.search) params.append("search", filters.search)
-    if (filters?.minPrice !== undefined) params.append("minPrice", filters.minPrice.toString())
-    if (filters?.maxPrice !== undefined) params.append("maxPrice", filters.maxPrice.toString())
-    if (filters?.inStock !== undefined) params.append("inStock", filters.inStock.toString())
+    if (filters?.inStock !== undefined) params.append("is_active", filters.inStock.toString())
 
-    const url = `${API_ENDPOINTS.products}?${params.toString()}`
+    const url = `${API_ENDPOINTS.items.list}?${params.toString()}`
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getAuthHeaders(),
+      credentials: "include", // Include cookies for authentication
       cache: "no-store",
     })
 
     if (!response.ok) {
-      throw new Error("Failed to fetch products")
+      const error = await response.json().catch(() => ({ message: "Failed to fetch products" }))
+      throw new Error(error.message || "Failed to fetch products")
     }
 
-    return response.json()
+    const data = await response.json()
+    // Transform backend response to frontend format
+    return {
+      items: data.items || [],
+      total: data.total || 0,
+      page: data.page || 1,
+      pages: data.pages || 1,
+    }
   }
 
   static async getProductById(id: string): Promise<Product> {
-    const url = `${API_ENDPOINTS.products}/${id}`
+    const url = API_ENDPOINTS.items.detail(id)
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getAuthHeaders(),
+      credentials: "include",
       cache: "no-store",
     })
 
     if (!response.ok) {
-      throw new Error("Failed to fetch product")
+      const error = await response.json().catch(() => ({ message: "Failed to fetch product" }))
+      throw new Error(error.message || "Failed to fetch product")
     }
 
-    return response.json()
+    const item = await response.json()
+    // Transform item to product format if needed
+    return item as Product
   }
 
   static async getCategories(): Promise<Category[]> {
-    const url = API_ENDPOINTS.categories
+    const url = API_ENDPOINTS.categories.list
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: this.getAuthHeaders(),
+      credentials: "include",
       cache: "no-store",
     })
 
     if (!response.ok) {
-      throw new Error("Failed to fetch categories")
+      const error = await response.json().catch(() => ({ message: "Failed to fetch categories" }))
+      throw new Error(error.message || "Failed to fetch categories")
     }
 
     return response.json()

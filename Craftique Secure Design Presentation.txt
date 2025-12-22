@@ -1,0 +1,2118 @@
+Presentation 2
+Crafts Shopping Application
+
+Team Members
+
+Abdelrahman Kaseb
+Omar Samir
+Mina Emad
+Peter Michael
+Mohamed Oaf
+
+Level 2 Data Flow Diagram - Customer Activity
+graph TD
+    %% Entities
+    Customer[Customer]
+    PayGW[External Payment Gateway API]
+
+    %% Data Stores (Physical representation hints)
+    D1_Users[(D1: Users DB)]
+    D2_Products[(D2: Products/Inventory DB)]
+    D3_Orders[(D3: Orders DB)]
+    D4_Session[(D4: Active Session/Cart State)]
+
+    %% Processes (Exploded Customer Function)
+    P1.1(1.1 Authenticate & Manage Profile)
+    P1.2(1.2 Browse & Discover Products)
+    P1.3(1.3 Manage Shopping Cart)
+    P1.4(1.4 Checkout & Payment Processing)
+
+    %% Flows - Authentication
+    Customer -- Login Creds / 2FA Token --> P1.1
+    P1.1 -- Verify Creds --> D1_Users
+    D1_Users -- User Details --> P1.1
+    P1.1 -- Auth Confirmation / Profile Data --> Customer
+    P1.1 -- Update Profile Info --> D1_Users
+
+    %% Flows - Browsing & Discovery
+    Customer -- Search Query, Filters, Sort Request --> P1.2
+    P1.2 -- Query Products --> D2_Products
+    D2_Products -- Product Data, Images, Specs --> P1.2
+    P1.2 -- Filtered Results / Product Details Page --> Customer
+    P1.2 -- Update 'Recently Viewed' --> D4_Session
+
+    %% Flows - Cart Management
+    Customer -- Add/Remove Item Request --> P1.3
+    P1.3 -- Read Product Availability / Price --> D2_Products
+    P1.3 -- Update Cart Contents --> D4_Session
+    D4_Session -- Current Cart State --> P1.3
+    P1.3 -- Cart Summary View --> Customer
+
+    %% Flows - Checkout & Payment
+    Customer -- Finalize Order / Shipping Info / Pay Details --> P1.4
+    D4_Session -- Retrieve Final Cart Contents --> P1.4
+    P1.4 -- Calculate Total & Shipping --> P1.4
+    P1.4 -- Encrypted Payment Data --> PayGW
+    PayGW -- Transaction Status (Success/Fail) --> P1.4
+    P1.4 -- Create New Order Record --> D3_Orders
+    P1.4 -- Update Stock Level (Decrement) --> D2_Products
+    P1.4 -- Order Confirmation Email/View --> Customer
+
+Level 2 Data Flow Diagram - Admin and Staff
+graph TD
+    %% Entities
+    Admin[Admin / Staff]
+
+    %% Data Stores
+    D1_Users[(D1: Users DB)]
+    D2_Products[(D2: Products DB)]
+    D3_Orders[(D3: Orders DB)]
+    D5_Analytics[(D5: Aggregated Analytics Data)]
+
+    %% Processes (Exploded Admin Function)
+    P2.1(2.1 Manage Products & Inventory)
+    P2.2(2.2 Order Fulfillment & Invoicing)
+    P2.3(2.3 Admin User Management)
+    P2.4(2.4 Reporting & Analytics Dashboard)
+
+    %% Flows - Product Management
+    Admin -- Add/Edit/Delete Product Data, Stock Adjustments --> P2.1
+    P2.1 -- Update Product Info & Stock Levels --> D2_Products
+
+    %% Flows - Order Fulfillment
+    Admin -- Request Pending Orders --> P2.2
+    D3_Orders -- Order Details & History --> P2.2
+    P2.2 -- Update Order Status (e.g., Shipped) --> D3_Orders
+    P2.2 -- Generate Invoice PDF --> Admin
+
+    %% Flows - User Management
+    Admin -- View/Manage Customer Request --> P2.3
+    D1_Users -- Customer Registered Data --> P2.3
+    P2.3 -- Update User Status / Roles --> D1_Users
+
+    %% Flows - Analytics
+    D3_Orders -- Raw Sales Data Extract --> P2.4
+    D1_Users -- Customer Growth Data Extract --> P2.4
+    P2.4 -- Aggregate & Process Data --> D5_Analytics
+    D5_Analytics -- Performance Metrics --> P2.4
+    P2.4 -- Sales, Revenue, Overview Dashboard View --> Admin
+
+Technical Threat Modeling
+
+Technical Threats - Spoofing
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Technical Threats - Tampering
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Technical Threats - Repudiation
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Technical Threats - Information Disclosure
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Technical Threats - Denial of Service (DoS)
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Technical Threats - Elevation of Privilege
+Spoofing Identity: Attackers impersonate legitimate users or systems (e.g., phishing, IP spoofing).
+Tampering: Unauthorized modification of data, code, or system state (e.g., altering API requests).
+Repudiation: Denying the performance of an action, lacking accountability (e.g., deleting logs).
+Information Disclosure: Unauthorized access to sensitive data (e.g., SQL injection revealing secrets).
+Denial of Service (DoS): Making a system unavailable to legitimate users (e.g., DDoS attacks).
+Elevation of Privilege: Gaining unauthorized higher-level access (e.g., exploiting buffer overflows).
+
+Risk assessment
+
+Risk assessment on Spoofing User Identity
+
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.1.1 Mass Phishing
+(Email spoofing)
+4 (High)
+4 (High)
+16
+DNS Records: Configure SPF, DKIM, and DMARC records for your domain to prevent attackers from sending emails that look like they come from your app. (through SendGrid)
+1 (Low)
+16 (Highest)
+1.2.1 Credential Stuffing
+
+(Reused passwords)
+5 (Certain)
+4 (High)
+20
+Rate Limiting: Implement express-rate-limit on the /login route. Add a generic delay (await new Promise(r => setTimeout(r, 500))) to login responses to slow down bots.
+1 (Low)
+20 (Highest)
+
+Risk assessment on Spoofing User Identity
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.2.2 Brute Force / DoS
+
+(Node Event Loop Block)
+3 (Med)
+3 (Med)
+9
+- bcrypt optimization: Ensure bcrypt.hash is running asynchronously in the libuv thread pool, not blocking the main event loop. Limit login attempts per IP.
+- Rate limiting
+- Cloudflare
+2 (Med)
+4.5 (Med)
+1.2.3 NPM Supply Chain
+
+(Stealing ENV)
+2 (Low)
+5 (Critical)
+10
+CI/CD Audits: Add npm audit to your build pipeline. Use npm ci (clean install) instead of npm install in production to respect the lockfile strictly.
+lockfile
+1 (Low)
+10 (High)
+1.3.1 SQL Injection
+
+(Dump Users)
+3 (Med)
+5 (Critical)
+15
+Parameterized Queries: Use Postgres parameters ($1) exclusively. Never concatenate strings into queries.
+1 (Low)
+15 (High)
+
+Risk assessment on Spoofing User Identity
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.2.1 API Route Skipping
+
+(Middleware gap)
+3 (Med)
+5 (Critical)
+15
+Global Middleware: Apply the verifyJwt middleware at the top level app.use('/api', verifyJwt) rather than on individual route handlers.
+1 (Low)
+15 (High)
+2.2.2 Stolen Refresh Token
+3 (Med)
+4 (High)
+12
+Refresh Rotation: When a Refresh Token is used, issue a new pair (Access + Refresh) and invalidate the old Refresh Token family in Postgres.
+4 (High)
+3 (Low)
+
+Risk assessment on Spoofing User Identity
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 XSS (localStorage)
+(Script access)
+4 (High)
+5 (Critical)
+20
+HttpOnly Cookies: Stop storing JWTs in localStorage. Send them as HttpOnly; Secure cookies so JavaScript (and XSS) cannot read them.
+1 (Low)
+20 (Highest)
+3.1.2 XSS (Proxying)
+(CSRF-like)
+3 (Med)
+4 (High)
+12
+Strict CSP: Implement Content Security Policy (helmet.contentSecurityPolicy) to restrict where the browser can send requests.
+2 (Med)
+6 (Med)
+3.2.1 Weak Secret
+(HMAC Crack)
+3 (Med)
+5 (Critical)
+15
+Strong Key: openssl rand -base64 64. Save this in .env. Never use "secret123".
+1 (Low)
+15 (High)
+
+Risk assessment on Spoofing User Identity
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.2.2 'None' Algorithm
+1 (Rare)
+5 (Critical)
+5
+Hardcoded Algorithms: In jwt.verify(token, secret, { algorithms: ['HS256'] }), explicitly enforce the algorithm list.
+1 (Low)
+5 (Med)
+3.2.3 Algo Confusion
+
+(Public Key as HMAC)
+2 (Low)
+5 (Critical)
+10
+Separate Secrets: (Same as above). Enforcing algorithms: ['RS256'] (or HS256) prevents the library from trying to verify an HMAC signature using a Public Key.
+1 (Low)
+10 (High)
+
+Risk assessment on Spoofing User Identity
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.1.1 Predictable Tokens
+
+(Math.random)
+3 (Med)
+5 (Critical)
+15
+Crypto Module: Use crypto.randomBytes(32).toString('hex') to generate reset tokens. Never use Math.random().
+1 (Low)
+15 (High)
+4.2.1 Token Interception
+2 (Low)
+5 (Critical)
+10
+Short TTL: Set reset token expiration to 10-15 minutes in Postgres. Hash the token in the DB (like a password) so a DB leak doesn't reveal them. (through Auth0)
+2 (Med)
+5 (Med)
+4.2.2 Email Change Logic
+3 (Med)
+4 (High)
+12
+Re-Authentication: Require the user to enter their current password before updating their email address.
+2 (Med)
+6 (High)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.1.1 JS Type Coercion
+
+(Array vs String)
+4 (Common)
+4 (High)
+16
+Schema Validation Middleware: Implement Zod or Joi to enforce primitive types (z.string()) before controller logic.
+1 (Low)
+16 (Highest)
+1.1.2 Prototype Pollution
+
+(JSON Merge)
+2 (Low)
+5 (Critical)
+10
+Freeze Prototypes: Add Object.freeze(Object.prototype) in app.js. Use safe-flat or validated merge libraries.
+1 (Low)
+10 (High)
+1.1.3 Negative Quantity
+
+(Logic Error)
+3 (Medium)
+3 (Medium)
+9
+DB Constraint: Add CHECK (quantity > 0) to Postgres table. This prevents bad logic from ever saving bad data.
+1 (Low)
+9 (High)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.2.1 Webhook Replay
+
+(No Idempotency)
+2 (Low)
+4 (High)
+8
+Idempotency Table: Create a Postgres table webhook_events. Insert event_id with a UNIQUE constraint.
+2 (Med)
+4 (Med)
+1.2.2 Signature Bypass
+
+(Weak Verify)
+2 (Low)
+5 (Critical)
+10
+Raw Body Check: Configure express.json({ verify: ... }) to validate HMAC against the raw buffer, not parsed JSON.
+middleware
+2 (Med)
+5 (Med)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.1.1 Overselling
+
+(Async Gaps)
+3 (Medium)
+3 (Medium)
+9
+Pessimistic Locking: Use Postgres Transactions (BEGIN) with SELECT ... FOR UPDATE to lock rows during purchase.
+3 (High)
+3 (Med)
+2.2.1 React XSS
+
+(InnerHtml)
+2 (Low)
+3 (Medium)
+6
+DOMPurify: If dangerouslySetInnerHTML is required, wrap the content in DOMPurify.sanitize().
+1 (Low)
+6 (High)
+2.2.2 React State Tampering
+
+(DevTools)
+5 (Certain)
+1 (Low*)
+5
+Zero Trust: Ignore client prices. Recalculate totals on backend using IDs. Impact is low only if backend works correctly.
+2 (Med)
+2.5 (Low)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 Mass Assignment
+
+(req.body)
+5 (Frequent)
+5 (Critical)
+25
+Explicit Selection: Never pass req.body to ORM. Use const { name } = req.body; User.update({ name }).
+1 (Low)
+25 (Highest)
+3.1.2 Overwriting Flags
+(e.g., is_admin)
+5 (Frequent)
+5 (Critical)
+25
+DTO Pattern: Use separate request schemas (Zod) for user updates that strictly exclude system flags.
+1 (Low)
+25 (Highest)
+
+3.2.1 IDOR in API
+
+(URL Params)
+4 (High)
+5 (Critical)
+20
+JWT Ownership Check: Middleware comparing req.params.id vs req.user.id (from decoded JWT).
+2 (Med)
+10 (High)
+3.2.2 UUID Guessing
+(v1 vs v4)
+1 (Rare)
+4 (High)
+4
+Postgres Gen: Use gen_random_uuid() (v4) in Postgres definition rather than generating in Node.
+1 (Low)
+4 (Med)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.1.1 SQL Injection
+
+(Template Literal)
+2 (Low)
+5 (Critical)
+10
+Parameterized Queries: Use $1, $2 syntax. Ban usage of backticks (`) inside db.query() calls via linter.
+1 (Low)
+10 (High)
+4.1.2 ORM Injection
+(Query Builder)
+2 (Low)
+4 (High)
+8
+Code Audit: Grep codebase for .raw(), .literal() and ensure user input is never concatenated inside them.
+SAST in CI/CD
+2 (Med)
+4 (Med)
+4.1.3 JSONB Injection
+
+(Path manip)
+1 (Rare)
+3 (Medium)
+3
+Key Validation: Whitelist allowed JSON keys in Node before constructing the SQL query.
+2 (Med)
+1.5 (Low)
+
+Risk assessment on Tampering
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.2.1 Log Injection
+
+(CRLF)
+2 (Low)
+2 (Low)
+4
+Sanitization: Configure logging library (Winston/Pino) to escape newlines automatically.
+1 (Low)
+4 (Med)
+4.2.2 Truncation
+
+(Limit cut-off)
+2 (Low)
+2 (Low)
+4
+Schema Match: Ensure Zod/Joi string limits match Postgres VARCHAR limits exactly.
+1 (Low)
+4 (Med)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.1.1 Stateless JWT Replay
+
+(Double Charge)
+2 (Low)
+4 (High)
+8
+JTI Claim & Redis: Add a unique jti (JWT ID) to tokens. Store used jti in Redis with expiry to prevent reuse within the validity window.
+3 (Med)
+2.6 (Low)
+1.1.2 Token Theft
+
+(Impersonation)
+3 (Med)
+5 (Critical)
+15
+HttpOnly Cookies: Do not store JWT in localStorage. Send it as an HttpOnly; Secure; SameSite=Strict cookie to prevent XSS theft.
+1 (Low)
+15 (Highest)
+1.1.3 Lack of Revocation
+
+(Zombie Session)
+3 (Med)
+3 (Medium)
+9
+Short Expiry + Refresh: Set JWT access token expiry to 15 mins. Use a database-backed Refresh Token for long sessions that can be revoked.
+3 (Med)
+3 (Med)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.2.1 Missing Idempotency
+
+(Double Orders)
+4 (High)
+3 (Medium)
+12
+Idempotency Key: Client sends a unique UUID header (X-Idempotency-Key). Node checks a Postgres table; if key exists, return saved response without re-processing.
+2 (Med)
+6 (High)
+1.2.2 Webhook Spoofing
+
+(Fake Pay)
+2 (Low)
+5 (Critical)
+10
+HMAC Verification: Use the raw request buffer to verify the provider's signature (e.g., PayMob) before trusting the payload.
+2 (Med)
+5 (Med)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.1.1 Ephemeral Logging
+
+(Lost logs)
+5 (Certain)
+3 (Medium)
+15
+Structured Logging: Replace console.log with Winston or Pino. Transport logs to a persistent file or service (e.g., Datadog/ELK) immediately.
+2 (Med)
+7.5 (High)
+2.1.2 Unawaited Log Promises
+2 (Low)
+2 (Low)
+4
+Exit Hooks: Ensure process.on('uncaughtException') handlers perform a synchronous flush of logs before the process dies.
+2 (Med)
+2 (Low)
+2.1.3 Missing Correlation ID
+4 (High)
+3 (Medium)
+12
+AsyncLocalStorage: Use Node's AsyncLocalStorage to wrap requests. Generate a request_id and auto-inject it into every log line for that request scope.
+2 (Med)
+6 (High)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.2.1 Bypassing App Logic
+
+(Direct DB)
+2 (Low)
+5 (Critical)
+10
+Network Isolation: Configure pg_hba.conf to only accept connections from the Node.js container IP/Subnet (except for specific admin VPNs).
+2 (Med)
+5 (Med)
+2.2.2 Lack of Row Triggers
+
+(No history)
+3 (Med)
+4 (High)
+12
+Shadow Tables: Create a generic Postgres trigger (AFTER UPDATE/DELETE) that copies the OLD row to an _audit_log table automatically.
+3 (High)
+4 (Med)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 CSRF (Missing Token)
+3 (Med)
+4 (High)
+12
+SameSite=Strict: Set the JWT Cookie attribute SameSite=Strict. This blocks the cookie from being sent by third-party origins entirely.
+1 (Low)
+12 (Highest)
+3.1.2 Lax SameSite
+3 (Med)
+4 (High)
+12
+SameSite=Strict: (Same as above - this is a configuration fix).
+1 (Low)
+12 (Highest)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.2.1 UI State Mismatch
+4 (High)
+2 (Low)
+8
+Backend Calculation: Never trust price/total from Frontend. Recalculate everything in Node. Log the "quoted price" snapshot if legal requires it.
+2 (Med)
+4 (Med)
+3.2.2 Validation Bypass
+5 (Certain)
+3 (Medium)
+15
+Zod Schema: Define validation schemas in a shared folder (monorepo) or duplicate them. If backend Zod fails, reject request regardless of UI state.
+1 (Low)
+15 (Highest)
+
+Risk assessment on Repudiation
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.1.1 Shared DB User
+
+(Acting as 'postgres')
+5 (Common)
+4 (High)
+20
+Least Privilege Users: Create a specific Postgres role app_user with only CRUD permissions on specific tables. No DDL (DROP table) rights.
+1 (Low)
+20 (Highest)
+4.1.2 Lack of MFA
+2 (Low)
+5 (Critical)
+10
+TOTP Implementation: Require 2FA (Time-based One-Time Password) for any route accessing /admin/*.
+3 (High)
+3.3 (Med)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.1.1 Stack Traces
+
+(Debug info)
+5 (Default)
+3 (Medium)
+15
+Env Var Config: Set NODE_ENV=production on the server. This automatically suppresses stack traces in Express default error handlers.
+1 (Low)
+15 (Highest)
+1.1.2 DB Schema Leak
+
+(SQL Errors)
+4 (High)
+4 (High)
+16
+Global Error Handler: Create a middleware at the end of app.js that catches DB errors and returns a generic "Internal Server Error" while logging the details privately.
+2 (Med)
+8 (High)
+1.2.1 ORM Full Object
+
+(Password Hash)
+4 (High)
+5 (Critical)
+20
+Response Transform/DTO: Use Sequelize attributes: { exclude: ['password'] } or a response interceptor to strip sensitive fields before res.json().
+2 (Med)
+10 (High)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.2.2 Unfiltered JSON
+
+(Hidden fields)
+4 (High)
+3 (Medium)
+12
+Explicit Selection: Never return SELECT *. Select specific columns in the SQL query to ensure data minimization.
+2 (Med)
+6 (Med)
+1.3.1 Exposing .env/.git
+2 (Low)
+5 (Critical)
+10
+Static Route Config: Ensure express.static points to a specific /build or /public folder, never the root ./ directory.
+Gitleaks in CI/CD
+1 (Low)
+10 (High)
+1.3.2 Directory Listing
+3 (Med)
+2 (Low)
+6
+Disable Indexing: If using serve-index, disable it in production. Typically disabled by default in standard Express setups.
+1 (Low)
+6 (Med)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.1.1 Source Maps
+
+(Code Reconstruction)
+5 (Default)
+3 (Medium)
+15
+Disable Generation: Set GENERATE_SOURCEMAP=false in your build script (e.g., in package.json for Create React App/Vite) before deploying.
+1 (Low)
+15 (Highest)
+2.1.2 Hardcoded Secrets
+
+(API Keys)
+3 (Med)
+5 (Critical)
+15
+Backend Proxy: Never put private keys in React. Move the API call to Node.js; React calls Node, Node calls the 3rd party service using the secret.
+3 (High)
+5 (Med)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.2.1 Sensitive Data in Redux
+3 (Med)
+3 (Medium)
+9
+State Clearing: Implement a "Logout" reducer that resets the entire Redux state tree to initial values to clear cached PII.
+2 (Med)
+4.5 (Med)
+2.2.2 PII in Storage
+
+(local/session)
+4 (High)
+4 (High)
+16
+Memory Only: Store sensitive PII (like User Profiles) in React Context/State only. Re-fetch on reload. Do not persist PII to localStorage.
+2 (Med)
+8 (High)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 Blind SQLi
+
+(Char by Char)
+2 (Low)
+5 (Critical)
+10
+Parameterized Queries: (Standard defense). Use PG client params $1, $2 or ORM binding.
+1 (Low)
+10 (High)
+3.1.2 Error-Based SQLi
+
+(Casting Errors)
+3 (Med)
+4 (High)
+12
+Generic Errors: (Same as 1.1.2). Ensure database error strings (e.g., "syntax error at...") never reach the HTTP response body.
+1 (Low)
+12 (Highest)
+3.2.1 Public pg_dump
+1 (Rare)
+5 (Critical)
+5
+Access Control: Store backups outside the web root (e.g., in a private S3 bucket), never in the Node.js public/ folder.
+1 (Low)
+5 (Med)
+3.2.2 Unencrypted Backups
+3 (Med)
+4 (High)
+12
+Encryption at Rest: Enable AWS S3 Bucket Encryption or encrypt the dump file using GPG before upload.
+2 (Med)
+6 (Med)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.1.1 Logging req.body
+
+(Passwords/CC)
+5 (Common)
+5 (Critical)
+25
+Log Redaction: Configure logging middleware (like morgan or winston) with a whitelist. Explicitly filter out password, token, credit_card.
+2 (Med)
+12.5 (High)
+4.1.2 Logging Auth Headers
+
+(Bearer Tokens)
+4 (High)
+4 (High)
+16
+Header Filtering: Configure the logger to log req.headers but exclude Authorization or mask it (e.g., Bearer *****).
+1 (Low)
+16 (Highest)
+
+Risk assessment on Information Disclosure
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.2.1 Malicious NPM
+
+(Env stealing)
+2 (Low)
+5 (Critical)
+10
+Audit Pipeline: Run npm audit in CI/CD. Lock dependencies (package-lock.json). Use tools like Snyk.
+1 (Low)
+10 (High)
+4.2.2 Exposed Metrics
+
+(Prometheus)
+3 (Med)
+2 (Low)
+6
+Internal Port: Expose metrics on a different port (e.g., 9090) that is not exposed to the public Internet, or add Basic Auth.
+2 (Med)
+3 (Low)
+
+Risk assessment on Denial of Service (DoS)
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.3.1 React2Shell (RCE)
+(CVE-2025-66478)
+3 (Med)
+5 (Critical)
+15
+Update Next.js to the latest patch version:
+Ensure no experimental RSC flags are enabled in production.
+1 (Low)
+15 (Highest)
+5.2.1 Layer 7 HTTP Flood
+(Bypassing Rate Limits)
+2 (Low)
+3 (Med)
+6
+Cloudflare WAF: Configure Cloudflare "Rate Limiting" rules to challenge IPs exceeding X requests/sec on /api/* routes.
+1
+(Low)
+6 (High)
+4.1.1 DB Connection Starvation
+3 (Med)
+4 (Critical)
+12
+PgBouncer: Do not let Node.js connect directly to Postgres. Place a PgBouncer pooler in between to manage connection reuse.
+2 (Med)
+6 (High)
+2.1.1 Large Payload Abuse
+(Memory Exhaustion)
+1 (Low)
+3 (Med)
+3
+Express Config and Nginx Config. Set strict limits: app.use(express.json({ limit: '10kb' })). Reject payloads larger than necessary globally.
+1 (Low)
+3 (Med)
+
+Risk assessment on Denial of Service (DoS)
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 Image Opt. Flooding
+(CPU Spikes via Resize)
+1 (Med)
+2 (Med)
+2
+Next.js Config. In next.config.js, strictly whitelist images.domains and set images.deviceSizes to limit generated variants. This threat is unlikely to happen if we serve images using express and not as a server component using next.
+1 (Low)
+2 (Low)
+1.1.1 Blocking Main Thread
+(Heavy Sync Tasks)
+2 (Low)
+3 (Med)
+6
+Architecture Change. Avoid blocking payment requests, utilize webhooks provided by payment provider.
+1
+(Low)
+6 (High)
+1.2.1 ReDoS
+(Vulnerable Regex)
+3 (Med)
+3 (Critical)
+9
+Validation Libs. Replace custom RegEx in routes with Zod or Joi schemas, which handle parsing more safely.
+1 (Med)
+9 (High)
+
+Risk assessment on Elevation of Privilege
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+1.1.1 Mass Assignment
+(Blind Spreading)
+5 (Common)
+5 (Critical)
+25
+Explicit DTOs: Never pass req.body to User.update. Destructure only safe fields: update({ name: req.body.name }).
+1 (Low)
+25 (Highest)
+1.1.2 Prototype Pollution
+(Merge Injection)
+2 (Low)
+5 (Critical)
+10
+Freeze Prototype: Add Object.freeze(Object.prototype) at app startup. Use zod to validate nested JSON payloads.
+1 (Low)
+10 (High)
+1.2.1 Route Ordering
+(Unprotected Admin)
+3 (Med)
+5 (Critical)
+15
+Middleware Hierarchy: Define global auth middleware app.use(auth) before defining any route controllers.
+1 (Low)
+15 (Highest)
+1.2.2 Missing Role Check
+(Auth != Authorized)
+4 (High)
+5 (Critical)
+20
+RBAC Middleware: Create a reusable requireRole('admin') middleware and attach it to specific administrative routes.
+2 (Med)
+10 (High)
+
+Risk assessment on Elevation of Privilege
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+2.1.1 Algorithm Confusion
+
+(None/HS256)
+2 (Low)
+5 (Critical)
+10
+Enforce Algorithm: In jwt.verify(), explicitly set { algorithms: ['HS256'] } to prevent the server from accepting 'none' or public keys as secrets.
+1 (Low)
+10 (High)
+2.1.2 Weak Secret Force
+
+(Cracking)
+3 (Med)
+5 (Critical)
+15
+High Entropy Secret: Use a generated 64-char random string for JWT_SECRET. Store in .env, never in code.
+1 (Low)
+15 (Highest)
+2.2.1 Stolen Refresh Token
+3 (Med)
+5 (Critical)
+15
+Token Rotation: Implementing "Refresh Token Rotation" (new token issued on every use) + DB invalidation.
+4 (High)
+3.75 (Med)
+
+Risk assessment on Elevation of Privilege
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+3.1.1 UI State Tampering
+(DevTools)
+5 (Certain)
+1 (Low*)
+5
+Zero Trust Backend: Ignore isAdmin flags sent from React. Always derive permissions from the decoded JWT on the server.
+1 (Low)
+5 (Med)
+3.1.2 Route Guard Bypass
+(Navigating URL)
+5 (Certain)
+1 (Low*)
+5
+API Authorization: React Route Guards are UX only. The real defense is the API returning 403 Forbidden when the component fetches data.
+1 (Low)
+5 (Med)
+
+Risk assessment on Elevation of Privilege
+Threat Node
+Likelihood (L)
+Impact (I)
+Risk Score
+Proposed Defense (PERN Specific)
+Cost (C)
+ROI Score
+4.1.1 RCE via Exec
+(Shell commands)
+1 (Rare)
+5 (Critical)
+5
+Linter Rules: Use eslint-plugin-security to ban eval(), child_process.exec, etc.
+1 (Low)
+5 (Med)
+4.1.2 SQL Injection
+(Role Update)
+2 (Low)
+5 (Critical)
+10
+Parameterized/ORM: Use Sequelize/TypeORM properly. Avoid string concatenation in WHERE clauses.
+1 (Low)
+10 (High)
+4.2.1 Over-Privileged DB
+(Superuser)
+5 (Common)
+4 (High)
+20
+Least Privilege User: Connect Node to Postgres using a user that explicitly cannot ALTER TABLE or access system schemas.
+1 (Low)
+20 (Highest)
+4.2.2 Debug Ports
+(Port 9229)
+2 (Low)
+5 (Critical)
+10
+Container Config: Ensure Dockerfile does not expose port 9229. Bind inspector to 127.0.0.1 only.
+1 (Low)
+10 (High)
+
+Chosen Defenses
+
+Application Logic & Code Defenses
+Exact Threat Mitigated
+Defense Mechanism
+Implementation Details (PERN)
+Cost (C)
+ROI Score
+Mass Assignment
+(Attackers overwriting is_admin via req.body)
+Explicit DTOs / No Spread
+Do not use User.update(req.body). Manually destructure inputs: User.update({ name: req.body.name }).
+1 (Low)
+25 (Highest)
+JS Type Coercion
+
+(Sending Arrays/Objects to bypass logic)
+Strict Schema Validation (Zod)
+Use Zod middleware on all write routes to enforce primitive types (e.g., z.string(), z.number()).
+1 (Low)
+16 (Highest)
+Predictable Reset Tokens
+(Using Math.random for recovery)
+Secure Randomness
+Replace Math.random() with crypto.randomBytes(32).toString('hex') for all security tokens.
+1 (Low)
+15 (High)
+IDOR
+(Viewing other users' data via URL ID)
+Ownership Check Middleware
+Verify resource.owner_id === req.user.id (from JWT) before returning any data.
+2 (Med)
+10 (High)
+
+Authentication & Session Defenses
+Exact Threat Mitigated
+Defense Mechanism
+Implementation Details (PERN)
+Cost (C)
+ROI Score
+XSS Token Theft
+
+(Stealing JWTs from localStorage)
+HttpOnly Cookies
+Store JWT in a cookie with flags: httpOnly: true, secure: true, sameSite: 'strict'.
+1 (Low)
+20 (Highest)
+Credential Stuffing
+
+(Bot attacks on login)
+Rate Limiting
+Implement express-rate-limit on /auth/login (e.g., max 5 attempts per 15 mins).
+1 (Low)
+20
+(Highest)
+Route Skipping / Algo Confusion
+
+(Bypassing Auth)
+Middleware Ordering & Enforcement
+Define app.use(verifyJwt) before routes. Hardcode algorithms: ['HS256'] in verification options.
+1 (Low)
+15
+(High)
+Algorithm Confusion
+
+(Signature forgery)
+Enforce Signing Algorithm
+Explicitly set { algorithms: ['HS256'] } in jwt.verify() to reject 'none' or public key attacks.
+1 (Low)
+10
+(High)
+
+Database Security
+Exact Threat Mitigated
+Defense Mechanism
+Implementation Details (PERN)
+Cost (C)
+ROI Score
+Superuser Abuse / Destructive SQLi
+
+(Dropping tables via injection)
+Least Privilege User
+Create a Postgres role for the app with only SELECT, INSERT, UPDATE, DELETE. Revoke DROP/ALTER.
+1 (Low)
+20
+(Highest)
+SQL Injection
+
+(Dumping data)
+Parameterized Queries
+Use $1, $2 syntax in pg or ORM binding. Ban string concatenation in SQL queries.
+1 (Low)
+15
+(High)
+Negative Quantity Logic
+
+(Business logic errors)
+Database Constraints
+Add CHECK (quantity > 0) constraints directly to Postgres table definitions.
+1 (Low)
+9
+(High)
+
+Infrastructure & Logging Defenses
+Exact Threat Mitigated
+Defense Mechanism
+Implementation Details (PERN)
+Cost (C)
+ROI Score
+Mass Phishing
+
+(Spoofing email domain)
+DNS Security Records
+Configure SPF, DKIM, and DMARC DNS records for the sending domain. (through SendGrid)
+1 (Low)
+16 (Highest)
+Stack Trace Exposure
+
+(Leaking file paths)
+Production Env Configuration
+Set NODE_ENV=production on the server and GENERATE_SOURCEMAP=false for React builds.
+1 (Low)
+15 (Highest)
+Credential Leak in Logs
+
+(Passwords in logs)
+Log Redaction
+Configure Winston/Pino to mask specific keys (password, token) before writing to stdout.
+2 (Med)
+12.5 (High)
+DB Schema Leaks
+(SQL errors in response)
+Global Error Handler
+Catch all errors in a final Express middleware and return generic 500 messages to the client.
+2 (Med)
+8 (High)
+
+Dependency checking and audit
+Exact Threat Mitigated
+Defense Mechanism
+Implementation Details (PERN)
+Cost (C)
+ROI Score
+3.3.1 React2Shell (RCE)
+(CVE-2025-66478)
+Dependency Patching
+Update the core frameworks to the patched versions immediately by running NPM audit fix or update package.json
+1 (Low)
+16 (Highest)
+
+System architecture 
+create a system architecture diagram with a frontend react server + backend express (nodeJS) server + cloudflare tunneling +auth0 IAM + paymob payment gateway + postgresql + sendgrid mail service + client
+
+
+classDiagram
+    %% --- Application Entry Point ---
+    class App {
+        +startServer()
+        +connectDatabase()
+        +mountMiddlewares()
+        +mountRoutes()
+    }
+
+    %% --- Middlewares Layer ---
+    class GlobalMiddleware {
+        <<Middleware>>
+        +helmet() : SecurityHeaders
+        +cors() : AccessControl
+        +express.json() : BodyParser
+        +logger(winston/pino) : RequestLog
+    }
+
+    class AuthMiddleware {
+        <<Middleware>>
+        +verifyToken(req, res, next) : Auth0_JWT
+        +requireRole(roles[]) : RBAC_Check
+        +validatePaymobHMAC(req, res, next) : Crypto_Verify
+    }
+
+    class ValidationMiddleware {
+        <<Middleware>>
+        +validateBody(zodSchema)
+        +validateQuery(zodSchema)
+        +validateParams(zodSchema)
+    }
+
+    class ErrorMiddleware {
+        <<Middleware>>
+        +notFoundHandler(req, res)
+        +globalErrorHandler(err, req, res, next)
+    }
+
+    %% --- Routers Layer (Express) ---
+    class AuthRouter {
+        <<Router>>
+        /auth/login
+        /auth/register
+        /auth/social
+        /auth/verify
+    }
+
+    class UserRouter {
+        <<Router>>
+        /users
+        /users/me
+        /moderators
+        /admins
+    }
+
+    class CatalogRouter {
+        <<Router>>
+        /items
+        /categories
+    }
+
+    class OrderRouter {
+        <<Router>>
+        /orders
+        /orders/:id/checkout
+        /payments/paymob/callback
+    }
+
+    class ReviewRouter {
+        <<Router>>
+        /items/:id/reviews
+        /reviews/:id
+    }
+
+    class AnalyticsRouter {
+        <<Router>>
+        /analytics/dashboard
+        /analytics/export
+    }
+
+    %% --- Controllers (Simplified Reference) ---
+    class AuthController
+    class UserController
+    class ProductController
+    class OrderController
+    class ReviewController
+    class AnalyticsController
+
+    %% --- Relationships & Flow ---
+    App --> GlobalMiddleware : uses
+    App --> ErrorMiddleware : uses
+    App --> AuthRouter : mounts
+    App --> UserRouter : mounts
+    App --> CatalogRouter : mounts
+    App --> OrderRouter : mounts
+    App --> ReviewRouter : mounts
+    App --> AnalyticsRouter : mounts
+
+    %% Router to Controller Connections
+    AuthRouter --> AuthController : dispatches
+    UserRouter --> UserController : dispatches
+    CatalogRouter --> ProductController : dispatches
+    OrderRouter --> OrderController : dispatches
+    ReviewRouter --> ReviewController : dispatches
+    AnalyticsRouter --> AnalyticsController : dispatches
+
+    %% Middleware Usage Dependencies
+    UserRouter ..> AuthMiddleware : protects
+    OrderRouter ..> AuthMiddleware : protects
+    AnalyticsRouter ..> AuthMiddleware : protects (Admin)
+    OrderRouter ..> AuthMiddleware : uses (HMAC)
+    
+    AuthRouter ..> ValidationMiddleware : uses (Zod)
+    UserRouter ..> ValidationMiddleware : uses (Zod)
+    CatalogRouter ..> ValidationMiddleware : uses (Zod)
+    OrderRouter ..> ValidationMiddleware : uses (Zod)
+
+
+classDiagram
+   %% --- Application Entry Point ---
+   class App {
+       +startServer()
+       +connectDatabase()
+       +mountMiddlewares()
+       +mountRoutes()
+   }
+
+   %% --- Global & Validation Middlewares ---
+   class GlobalMiddleware {
+       <<Middleware>>
+       +helmet() : SecurityHeaders
+       +cors() : AccessControl
+       +express.json() : BodyParser
+       +logger(winston/pino) : RequestLog
+   }
+
+   class ValidationMiddleware {
+       <<Middleware>>
+       +validateBody(zodSchema)
+       +validateQuery(zodSchema)
+       +validateParams(zodSchema)
+   }
+
+   class ErrorMiddleware {
+       <<Middleware>>
+       +notFoundHandler(req, res)
+       +globalErrorHandler(err, req, res, next)
+   }
+
+   %% --- Routers ---
+   class AuthRouter {
+       <<Router>>
+       /auth/login
+       /auth/register
+       /auth/social
+       /auth/verify
+   }
+
+   class CatalogRouter {
+       <<Router>>
+       /items
+       /categories
+   }
+
+   class ReviewRouter {
+       <<Router>>
+       /items/:id/reviews
+       /reviews/:id
+   }
+
+   %% --- Controllers ---
+   class AuthController
+   class ProductController
+   class ReviewController
+
+   %% --- Relationships ---
+   App --> GlobalMiddleware : uses
+   App --> ValidationMiddleware : uses
+   App --> ErrorMiddleware : uses
+
+   App --> AuthRouter : mounts
+   App --> CatalogRouter : mounts
+   App --> ReviewRouter : mounts
+
+   AuthRouter --> AuthController : dispatches
+   CatalogRouter --> ProductController : dispatches
+   ReviewRouter --> ReviewController : dispatches
+
+   AuthRouter ..> ValidationMiddleware : uses
+   CatalogRouter ..> ValidationMiddleware : uses
+   ReviewRouter ..> ValidationMiddleware : uses
+
+
+
+classDiagram
+   %% --- Application Entry Point ---
+   class App {
+       +startServer()
+       +connectDatabase()
+       +mountMiddlewares()
+       +mountRoutes()
+   }
+
+   %% --- Security & Auth Middlewares ---
+   class AuthMiddleware {
+       <<Middleware>>
+       +verifyToken(req, res, next) : Auth0_JWT
+       +requireRole(roles[]) : RBAC_Check
+       +validatePaymobHMAC(req, res, next) : Crypto_Verify
+   }
+
+   %% --- Routers ---
+   class UserRouter {
+       <<Router>>
+       /users
+       /users/me
+       /moderators
+       /admins
+   }
+
+   class OrderRouter {
+       <<Router>>
+       /orders
+       /orders/:id/checkout
+       /payments/paymob/callback
+   }
+
+   class AnalyticsRouter {
+       <<Router>>
+       /analytics/dashboard
+       /analytics/export
+   }
+
+   %% --- Controllers ---
+   class UserController
+   class OrderController
+   class AnalyticsController
+
+   %% --- Relationships ---
+   App --> UserRouter : mounts
+   App --> OrderRouter : mounts
+   App --> AnalyticsRouter : mounts
+
+   UserRouter --> UserController : dispatches
+   OrderRouter --> OrderController : dispatches
+   AnalyticsRouter --> AnalyticsController : dispatches
+
+   %% --- Middleware Dependencies ---
+   UserRouter ..> AuthMiddleware : protects
+   OrderRouter ..> AuthMiddleware : protects
+   OrderRouter ..> AuthMiddleware : uses (HMAC)
+   AnalyticsRouter ..> AuthMiddleware : protects (Admin)
+
+
+
+classDiagram
+    %% --- Relationships ---
+    User "1" --> "*" Order : places
+    User "1" --> "*" Review : writes
+    Category "1" --> "*" Item : contains
+    Category "0..1" --> "*" Category : parent
+    Item "1" --> "*" Review : has
+    Order "1" --> "*" OrderItem : contains
+    Order "1" -- "1" PaymobTransaction : linked_to
+    
+    %% --- Controllers (API Layer) ---
+    class AuthController {
+        +login(email, password)
+        +register(email, password, name)
+        +socialLogin(provider)
+        +verifyToken()
+        +refreshToken()
+        +forgotPassword(email)
+        +resetPassword(token, new_password)
+    }
+
+    class UserController {
+        +listUsers(page, role)
+        +createUser(data)
+        +getProfile()
+        +updateProfile(data)
+        +getUserById(id)
+        +updateUser(id, data)
+        +deleteUser(id)
+    }
+
+    class ProductController {
+        +listCategories(parent_id)
+        +createCategory(data)
+        +listItems(page, category_id, filters)
+        +createItem(data)
+        +getItemById(id)
+        +updateItem(id, data)
+        +deleteItem(id)
+    }
+
+    class OrderController {
+        +listOrders(user_id, status)
+        +createOrder(items, address)
+        +getOrderById(id)
+        +updateOrder(id, status)
+        +checkout(order_id, payment_method)
+        +handlePaymobCallback(hmac, data)
+    }
+
+    class ReviewController {
+        +getReviews(item_id)
+        +createReview(item_id, data)
+        +approveReview(review_id)
+        +deleteReview(review_id)
+    }
+
+    class AnalyticsController {
+        +getDashboard(period)
+        +getRevenueStats(date_range)
+        +getCustomerStats()
+        +exportData(report_type, format)
+    }
+
+    %% --- Domain Entities (Schema Layer) ---
+    class User {
+        +UUID id
+        +String auth0_id
+        +String email
+        +Enum role
+        +String[] permissions
+        +Object address
+        +DateTime last_login
+    }
+
+    class Category {
+        +UUID id
+        +String name
+        +String slug
+        +UUID parent_id
+        +String image_url
+        +Boolean is_active
+    }
+
+    class Item {
+        +UUID id
+        +String name
+        +Decimal price
+        +Decimal cost
+        +Integer quantity
+        +String sku
+        +UUID category_id
+        +String[] images
+        +Boolean is_featured
+    }
+
+    class Review {
+        +UUID id
+        +UUID item_id
+        +UUID user_id
+        +Integer rating
+        +String comment
+        +Boolean is_approved
+    }
+
+    class Order {
+        +UUID id
+        +String order_number
+        +UUID user_id
+        +Enum status
+        +Decimal total
+        +Object shipping_address
+        +Enum payment_method
+        +String paymob_order_id
+        +Integer paymob_transaction_id
+    }
+    
+    class OrderItem {
+        +UUID item_id
+        +String name
+        +Integer quantity
+        +Decimal price
+        +Decimal total
+    }
+
+    class PaymobTransaction {
+        +Integer id
+        +Boolean success
+        +Boolean pending
+        +Integer amount_cents
+        +Boolean is_refunded
+        +Object source_data
+        +String hmac
+    }
+
+    class Analytics {
+        +Enum period
+        +Decimal total_revenue
+        +Integer total_orders
+        +Decimal average_order_value
+        +Object[] top_products
+    }
+
+    %% --- Service Dependencies (Implied) ---
+    AuthController ..> User : manages
+    OrderController ..> Order : manages
+    OrderController ..> PaymobTransaction : processes
+    ProductController ..> Item : manages
+    ProductController ..> Category : manages
+    ReviewController ..> Review : manages
+    AnalyticsController ..> Analytics : aggregates
+
+
+classDiagram
+   %% ===============================
+   %% Identity
+   %% ===============================
+   class User {
+       +UUID id
+       +String email
+       +Enum role
+       +Object address
+   }
+
+   %% ===============================
+   %% Catalog
+   %% ===============================
+   class Category {
+       +UUID id
+       +String name
+       +UUID parent_id
+   }
+
+   class Item {
+       +UUID id
+       +String name
+       +Decimal price
+       +Integer quantity
+   }
+
+   %% ===============================
+   %% Reviews
+   %% ===============================
+   class Review {
+       +UUID id
+       +Integer rating
+       +String comment
+       +Boolean is_approved
+   }
+
+   %% ===============================
+   %% Cart
+   %% ===============================
+   class Cart {
+       +UUID id
+       +DateTime updated_at
+   }
+
+
+   %% ===============================
+   %% Controllers
+   %% ===============================
+   class AuthController
+   class UserController
+   class ProductController
+   class ReviewController
+   class CartController
+
+   %% ===============================
+   %% Relationships (Grouped)
+   %% ===============================
+   User "1" --> "1" Cart : owns
+   Cart "1" --> "*"  Item : references
+
+   User "1" --> "*" Review : writes
+   Item "1" --> "*" Review : has
+
+   Category "1" --> "*" Item : contains
+   Category "0..1" --> "*" Category : parent
+
+   %% ===============================
+   %% Controller Ownership
+   %% ===============================
+   AuthController ..> User
+   UserController ..> User
+   ProductController ..> Item
+   ProductController ..> Category
+   ReviewController ..> Review
+   CartController ..> Cart
+
+
+
+classDiagram
+   %% ===============================
+   %% Orders
+   %% ===============================
+   class Order {
+       +UUID id
+       +Enum status
+       +Decimal total
+   }
+
+   class OrderItem {
+       +Integer quantity
+       +Decimal price
+   }
+
+   %% ===============================
+   %% Payments
+   %% ===============================
+   class PaymobTransaction {
+       +Integer id
+       +Boolean success
+       +Integer amount_cents
+       +String hmac
+   }
+
+   %% ===============================
+   %% Analytics
+   %% ===============================
+   class Analytics {
+       +Decimal total_revenue
+       +Integer total_orders
+   }
+
+   %% ===============================
+   %% Controllers
+   %% ===============================
+   class OrderController
+   class AnalyticsController
+
+   %% ===============================
+   %% Relationships (Grouped)
+   %% ===============================
+   User "1" --> "*" Order : places
+   Order "1" --> "*" OrderItem : contains
+   Order "1" --> "1" PaymobTransaction : paid_by
+
+   %% ===============================
+   %% Controller Ownership
+   %% ===============================
+   OrderController ..> Order
+   OrderController ..> PaymobTransaction
+   AnalyticsController ..> Analytics
+
+
+
+System decisions and reasoning 
+Architecture Decisions
+
+Decision
+Reasoning & Defense
+Security Impact
+Monolithic Architecture
+Why: For an MVP e-commerce site, microservices add unnecessary network latency and complexity (auth, tracing). 
+Decision: Single Node.js Service with modular folder structure (MVC).
+Reduces the Attack Surface (fewer internal APIs to secure). Centralize logging and monitoring in one place.
+Token Storage: HttpOnly Cookies
+Why: localStorage is vulnerable to XSS. If a script injection happens, the attacker can read the token. 
+Decision: Store JWTs in HttpOnly, Secure, SameSite=Strict cookies.
+Mitigates XSS: Malicious JS cannot read the token. Mitigates CSRF: SameSite=Strict prevents cross-origin usage.
+Auth0 (OIDC)
+Why: Rolling our own auth is error-prone, Auth0 provides battle-tested implementations of hashing (bcrypt/Argon2), session management, and protections against brute-force and credential stuffing attacks.
+Decision: Delegated authentication via Auth0 Universal Login.
+Reduces Credential Theft: We never touch or store user passwords. Auth0 handles brute-force protection.
+Cloudflare Tunnel (Zero Trust)
+Why: Traditional deployment requires opening ports 80/443, making the server discoverable by scanners. 
+Decision: Run cloudflared daemon to create a secure outbound-only connection to Cloudflare's Edge.
+Attack Surface Reduction: The server has zero open inbound ports. The real IP address is completely hidden and unreachable, preventing direct-to-IP DDoS attacks.
+
+System decisions and reasoning 
+Payment & Integration Decisions
+
+Decision
+Reasoning & Defense
+Security Impact
+Paymob Webhooks
+Why: We need real-time order status updates (e.g., successful payment, decline). 
+Decision: Implement HMAC-SHA512 signature verification.
+Anti-Tampering: Ensures the webhook request actually came from Paymob and wasn't faked by a hacker using Postman.
+Idempotency Keys
+Why: Network retries can cause double charging. 
+Decision: Store a processed_transaction_id table. Check every webhook against it.
+Integrity: Guarantees an order is processed exactly once, preventing financial logic errors.
+SendGrid + DNS
+Why: Email is the primary trust channel for receipts/resets. 
+Decision: Configure SPF, DKIM, and DMARC records on Cloudflare.
+Anti-Spoofing: Prevents attackers from sending fake emails pretending to be our store (Phishing protection).
+
+System decisions and reasoning 
+Payment & Integration Decisions
+
+Decision
+Reasoning & Defense
+Security Impact
+Postgres RLS (Row Level Security)
+Why: Application logic bugs can leak data (e.g., SELECT * without WHERE user_id = ...). 
+Decision: Implement Postgres Policies (CREATE POLICY ... USING (user_id = current_user_id)).
+Defense in Depth: Even if the API code fails to filter data, the database engine blocks access to other users' rows.
+Zod Schema Validation
+Why: "Garbage In, Garbage Out." 
+Decision: Strict schema validation for every API route input (body, query, params).
+Input Hygiene: Blocks SQLi, XSS payloads, and "Negative Quantity" attacks before they reach business logic.
+Winston Logger + Redaction
+Why: Logs are a goldmine for hackers if they contain secrets. 
+Decision: Custom formatter to redact keys like password, token, cvv before writing to file.
+Info Disclosure: Prevents accidental leakage of PII and secrets in server logs.
+
+Alignment with owasp
+OWASP Category
+Contextual Threat
+How we aligned our design
+A01 Broken Access Control
+Viewing others' orders
+Postgres RLS (Row Level Security) + RBAC Middleware
+A02 Cryptographic Failures
+Leaking Secrets/PCI Data
+Auth0 (No DB passwords) + Paymob IFrame (No card data)
+A03 Injection
+SQLi via Search/Login
+Zod strict schemas + Parameterized Queries (pg)
+A04 Insecure Design
+Price/Quantity Tampering
+Server-Side Calculations (Trust no client input)
+A05 Security Misconfig
+Exposed Ports/Headers
+Cloudflare Tunnel (No inbound ports) + Helmet.js
+
+Alignment with owasp
+OWASP Category
+Contextual Threat
+How we aligned our design
+A06 Vulnerable Components
+Outdated NPM Packages
+Strict Versioning via package-lock.json
+A07 Auth Failures
+Session Hijacking/Stuffing
+HttpOnly Cookies
+A08 Integrity Failures
+Fake Payment Webhooks
+HMAC-SHA512 Signature Verification + Idempotency Keys
+A09 Logging Failures
+Undetected Breaches
+Winston (JSON logs) + PII Redaction
+A10 SSRF
+Internal Network Scanning
+Input Allow-listing + Network Isolation for API Container
+
+Security Requirements Traceability Matrix (SRTM)
+Requirement Summary
+Implementation / Composnent
+Status
+Authentication (R1)
+Strong Auth (Hashing)
+Auth0 Universal Login (Delegated Auth)
+Met
+MFA for Admins
+Auth0 Rule (Require MFA for role:admin)
+Met
+Secure Sessions
+HttpOnly, Secure, SameSite=Strict Cookies
+Met
+Brute Force Lockout
+Auth0 Anomaly Detection + express-rate-limit
+Met
+Immediate Logout
+Backlogged
+
+Requirement Summary
+Implementation / Composnent
+Status
+Access Control (R2)
+RBAC Implementation
+Auth0 Roles (admin, customer)
+Met
+Server-Side Checks
+Middleware: verifyRole(['admin']) on API routes
+Met
+Deny by Default
+Express: Global 404/403 Handler for unmatched routes
+Met
+Data Protection (R3)
+Encrypt Data at Rest
+Auth0 (Passwords) + Postgres (Volume Encryption)
+Met
+Encrypt Data in Transit
+Cloudflare Tunnel (Strict TLS/SSL)
+Met
+No Plaintext Secrets
+Env Vars + .gitignore (Secrets Mgmt)
+Met
+Minimized Collection
+Schema Design: Only storing necessary Order/User IDs
+Met
+
+Requirement Summary
+Implementation / Composnent
+Status
+Input Validation (R4)
+Strict Input Validation
+Zod Schemas (Middleware for Body/Query/Params)
+Met
+Sanitize Product/Cart
+Zod .min(1) rules + Backend Price Recalculation
+Met
+Prevent SQL Injection
+PG Library (Parameterized Queries $1, $2)
+Met
+JSON Schema Validation
+Zod Middleware applied to all POST/PUT routes
+Met
+Logging & Errors (R5-R6)
+Tamper-Resistant Logs
+Winston Logger (JSON format)
+Met
+Log Auth Events
+Auth0 Logs + Winston (Login/Logout info)
+Met
+No Sensitive Data in Logs
+Redaction Filter: Masks token, password, cvv
+Met
+Generic User Errors
+Error Handler: Returns "Invalid Request" to client
+Met
+Detailed Admin Logs
+Server Console/File: Full stack traces (Internal only)
+Met
+
+Requirement Summary
+Implementation / Component
+Status
+Config & Network (R7-R8)
+Secure Headers (CSP)
+Helmet.js (Sets Content-Security-Policy, X-Frame-Options)
+Met
+CSRF Protection
+SameSite=Strict Cookies
+Met
+Rate Limiting / DoS
+Cloudflare (Edge) + express-rate-limit (App)
+Met
+Data Protection (R3)
+Server-Side Cart Verify
+Backend Logic: price = db.product.price * qty
+Met
+Prevent Duplicate Orders
+Idempotency Keys (Checked against DB transactions)
+Met
+Draft Access Control
+Postgres RLS: Policy WHERE status = 'published'
+Met
+
+Requirement Summary
+Implementation / Component
+Status
+Origin/Reason
+New Security Decisions
+HMAC Integrity Check
+Crypto Module: Verify SHA512 signature on Webhooks
+Met
+Paymob Integration
+Zero-Trust Ingress
+Cloudflare Tunnel: No open inbound ports on server
+Met
+Network Security
+
+Assumptions
+Zero-Trust Infrastructure:
+Cloudflare Tunnel handles all ingress; Server has zero open inbound ports and is invisible to public scanners.
+NTP Synchronization: Server clock is accurate to ensure validity of JWTs and HMAC timestamps.
+Shared Responsibility Model:
+Delegated Compliance: We assume Auth0 and Paymob maintain SOC2/PCI-DSS standards; we never process raw credentials or card data.
+Email Integrity: SendGrid strictly enforces SPF/DKIM records to prevent domain spoofing.
+Client Environment:
+Browser Security: Users utilize modern browsers that enforce HttpOnly, Secure, and SameSite=Strict cookie attributes to prevent token theft.
+
+Residual Risks (Acceptable for now)
+DDoS on Public Webhook: The /webhooks/paymob endpoint is public. An attacker could flood it.
+Why acceptable: We rely on the cloud provider's (e.g., AWS WAF, Cloudflare) basic DDoS protection rather than application-level throttling for this MVP.
+Single Region Dependency
+The Risk: Your Postgres database and Node servers likely live in one specific data center (e.g., AWS us-east-1). If that specific building catches fire or loses power (crisis), your app goes offline.
+Why acceptable: Multi-region redundancy (Active-Active replication) requires doubling your infrastructure bill and massive engineering complexity. For most businesses, going offline for 4 hours once every 3 years is acceptable compared to the cost.
+Reliance on Third-Party Infrastructure Availability We accept the inherent risk of downtime caused by external provider outages. While our architecture is resilient, a total failure of the Cloudflare edge network or our ISP connectivity remains a single point of failure outside our direct control.
+Exposure to Undisclosed "Zero-Day" Exploits Despite rigorous patching of known vulnerabilities like React2Shell, we retain a residual risk regarding undiscovered vulnerabilities within the Next.js, Express, or Postgres ecosystems. These "Zero-Day" exploits exist without defenses until a vendor patch is released.
+
+
+
+
+
+Residual Risks (Acceptable for now)
+JWT Revocation Latency
+The Risk: Since we use JWTs (JSON Web Tokens) for authentication, they are "stateless." If we ban a user or they change their password, their old token might still work for 5–15 minutes until it naturally expires.
+Why acceptable: To fix this, we would need to check a "Blacklist" in Redis on every single API request, which slows down the application. You accept the "5-minute gap" to keep our app fast.
+
+
+
+
+
+
+
+
+Open Questions
+Token Revocation: JWTs are valid until expiry (24h). If a user is banned, they retain access for 24h.
+Decision: Do we implement a "Blacklist Cache" (Redis) for revoked tokens now, or later?

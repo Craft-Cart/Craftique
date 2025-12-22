@@ -1,0 +1,250 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  customer
+  moderator
+  admin
+}
+
+enum OrderStatus {
+  pending
+  processing
+  shipped
+  delivered
+  cancelled
+  refunded
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+  voided
+}
+
+enum PaymentMethod {
+  card
+  wallet
+  cash_on_delivery
+  kiosk
+  valu
+}
+
+model User {
+  id            String    @id @default(uuid())
+  auth0_id      String    @unique
+  email         String    @unique
+  email_verified Boolean  @default(false)
+  name          String
+  phone         String?
+  address       Json?
+  role          UserRole  @default(customer)
+  permissions   String[]  @default([])
+  last_login    DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  orders        Order[]
+  reviews       Review[]
+
+  @@index([auth0_id])
+  @@index([email])
+  @@index([role])
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  parent_id   String?
+  image_url   String?
+  is_active   Boolean    @default(true)
+  created_at  DateTime   @default(now())
+  updated_at  DateTime   @updatedAt
+
+  parent      Category?  @relation("CategoryHierarchy", fields: [parent_id], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryHierarchy")
+  items       Item[]
+
+  @@index([parent_id])
+  @@index([slug])
+  @@index([is_active])
+}
+
+model Item {
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  description     String?
+  price           Decimal   @db.Decimal(10, 2)
+  compare_at_price Decimal? @db.Decimal(10, 2)
+  cost            Decimal?  @db.Decimal(10, 2)
+  sku             String?  @unique
+  barcode         String?
+  quantity        Int       @default(0)
+  category_id     String
+  images          String[]
+  is_active       Boolean   @default(true)
+  is_featured     Boolean   @default(false)
+  weight          Decimal?  @db.Decimal(10, 2)
+  dimensions      Json?
+  metadata        Json?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  category        Category  @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  reviews         Review[]
+  order_items     OrderItem[]
+
+  @@index([category_id])
+  @@index([slug])
+  @@index([is_active])
+  @@index([is_featured])
+  @@index([sku])
+  @@check([quantity >= 0], name: "quantity_non_negative")
+}
+
+model Review {
+  id              String    @id @default(uuid())
+  item_id         String
+  user_id         String
+  rating          Int
+  title           String?
+  comment         String?
+  images          String[]
+  verified_purchase Boolean @default(false)
+  is_approved     Boolean   @default(false)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+
+  item            Item      @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([item_id])
+  @@index([user_id])
+  @@index([is_approved])
+  @@check([rating >= 1 && rating <= 5], name: "rating_range")
+}
+
+model Order {
+  id                    String         @id @default(uuid())
+  order_number          String         @unique
+  user_id               String
+  status                OrderStatus    @default(pending)
+  items                 Json           // Array of OrderItem snapshots
+  subtotal              Decimal        @db.Decimal(10, 2)
+  tax                   Decimal        @default(0) @db.Decimal(10, 2)
+  shipping              Decimal        @default(0) @db.Decimal(10, 2)
+  discount              Decimal        @default(0) @db.Decimal(10, 2)
+  total                 Decimal        @db.Decimal(10, 2)
+  currency              String         @default("EGP")
+  shipping_address      Json
+  billing_address       Json?
+  payment_method        PaymentMethod?
+  payment_status        PaymentStatus  @default(pending)
+  paymob_order_id       String?
+  paymob_transaction_id Int?
+  paymob_integration_id Int?
+  notes                 String?
+  created_at            DateTime       @default(now())
+  updated_at            DateTime       @updatedAt
+
+  user                  User           @relation(fields: [user_id], references: [id], onDelete: Restrict)
+  order_items           OrderItem[]
+
+  @@index([user_id])
+  @@index([status])
+  @@index([order_number])
+  @@index([payment_status])
+  @@check([total >= 0], name: "total_non_negative")
+}
+
+model OrderItem {
+  id          String   @id @default(uuid())
+  order_id   String
+  item_id    String
+  name       String
+  quantity   Int
+  price      Decimal  @db.Decimal(10, 2)
+  total      Decimal  @db.Decimal(10, 2)
+  created_at DateTime @default(now())
+
+  order      Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  item       Item     @relation(fields: [item_id], references: [id], onDelete: Restrict)
+
+  @@index([order_id])
+  @@index([item_id])
+  @@check([quantity > 0], name: "quantity_positive")
+  @@check([price >= 0], name: "price_non_negative")
+}
+
+model PaymobTransaction {
+  id                    Int       @id
+  order_id              String?   @unique
+  pending               Boolean   @default(false)
+  amount_cents           Int
+  success               Boolean   @default(false)
+  is_auth               Boolean   @default(false)
+  is_capture            Boolean   @default(false)
+  is_standalone_payment Boolean   @default(false)
+  is_voided             Boolean   @default(false)
+  is_refunded           Boolean   @default(false)
+  is_3d_secure          Boolean   @default(false)
+  integration_id        Int
+  profile_id             Int?
+  has_parent_transaction Boolean   @default(false)
+  currency               String
+  source_data            Json?
+  api_source             String?
+  terminal_id            String?
+  merchant_commission    Int?
+  installment            String?
+  discount_details       Json?
+  is_void                Boolean   @default(false)
+  is_refund              Boolean   @default(false)
+  data                   Json?
+  is_hidden              Boolean   @default(false)
+  payment_key_claims     Json?
+  error_occured          Boolean   @default(false)
+  is_live                Boolean   @default(false)
+  other_endpoint_reference String?
+  refunded_amount_cents  Int?
+  source_id              Int?
+  is_captured            Boolean   @default(false)
+  captured_amount        Int?
+  merchant_staff_tag     String?
+  owner                  Int?
+  parent_transaction     String?
+  hmac                   String?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  @@index([order_id])
+  @@index([success])
+}
+
+model WebhookEvent {
+  id                String   @id @default(uuid())
+  event_id           String   @unique
+  event_type         String
+  payload            Json
+  processed          Boolean  @default(false)
+  created_at         DateTime @default(now())
+  processed_at       DateTime?
+
+  @@index([event_id])
+  @@index([processed])
+}
+
