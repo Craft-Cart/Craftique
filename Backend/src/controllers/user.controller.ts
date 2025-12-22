@@ -108,5 +108,85 @@ export class UserController {
       next(error);
     }
   };
+
+  getModerators = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.userService.getUsers({ role: 'moderator' });
+      res.json(result.users);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  createModerator = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, name, permissions } = req.body;
+      const user = await this.userService.createUser({
+        email,
+        name,
+        role: 'moderator',
+      });
+      res.status(201).json(user);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updateModerator = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { moderator_id } = req.params;
+      const { permissions } = req.body;
+      // Update permissions logic would go here
+      const user = await this.userService.getUserById(moderator_id);
+      res.json(user);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteModerator = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { moderator_id } = req.params;
+      // Change role to customer instead of deleting
+      await this.userService.updateUserAdmin(moderator_id, { role: 'customer' });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAdmins = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.userService.getUsers({ role: 'admin' });
+      res.json(result.users);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  createAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { email, name } = req.body;
+      const user = await this.userService.createUser({
+        email,
+        name,
+        role: 'admin',
+      });
+      res.status(201).json(user);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  deleteAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { admin_id } = req.params;
+      // Change role to customer instead of deleting
+      await this.userService.updateUserAdmin(admin_id, { role: 'customer' });
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 

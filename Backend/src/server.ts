@@ -13,6 +13,9 @@ import itemRoutes from './routes/item.routes';
 import reviewRoutes from './routes/review.routes';
 import orderRoutes from './routes/order.routes';
 import paymentRoutes from './routes/payment.routes';
+import analyticsRoutes from './routes/analytics.routes';
+import moderatorRoutes from './routes/moderator.routes';
+import adminRoutes from './routes/admin.routes';
 
 const app: Express = express();
 
@@ -50,11 +53,14 @@ app.get('/health', (req: Request, res: Response) => {
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/moderators', moderatorRoutes);
+app.use('/api/v1/admins', adminRoutes);
 app.use('/api/v1/categories', categoryRoutes);
 app.use('/api/v1/items', itemRoutes);
 app.use('/api/v1', reviewRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
+app.use('/api/v1/analytics', analyticsRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
