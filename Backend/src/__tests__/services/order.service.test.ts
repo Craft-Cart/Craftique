@@ -5,9 +5,37 @@ import { ItemService } from '../../services/item.service';
 import { NotFoundError, ValidationError } from '../../utils/errors';
 import { Decimal } from '@prisma/client/runtime/library';
 
-jest.mock('../../repositories/order.repository');
-jest.mock('../../repositories/item.repository');
-jest.mock('../../services/item.service');
+jest.mock('../../repositories/order.repository', () => {
+  return {
+    OrderRepository: jest.fn().mockImplementation(() => ({
+      findById: jest.fn(),
+      findByOrderNumber: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      updatePaymentStatus: jest.fn(),
+      generateOrderNumber: jest.fn(),
+    })),
+  };
+});
+
+jest.mock('../../repositories/item.repository', () => {
+  return {
+    ItemRepository: jest.fn().mockImplementation(() => ({
+      findByIds: jest.fn(),
+    })),
+  };
+});
+
+jest.mock('../../services/item.service', () => {
+  return {
+    ItemService: jest.fn().mockImplementation(() => ({
+      checkAvailability: jest.fn(),
+      reserveItems: jest.fn(),
+    })),
+  };
+});
 
 describe('OrderService', () => {
   let orderService: OrderService;
@@ -16,9 +44,13 @@ describe('OrderService', () => {
   let mockItemService: jest.Mocked<ItemService>;
 
   beforeEach(() => {
-    mockOrderRepository = new OrderRepository() as jest.Mocked<OrderRepository>;
-    mockItemRepository = new ItemRepository() as jest.Mocked<ItemRepository>;
-    mockItemService = new ItemService() as jest.Mocked<ItemService>;
+    const OrderRepositoryMock = require('../../repositories/order.repository').OrderRepository;
+    const ItemRepositoryMock = require('../../repositories/item.repository').ItemRepository;
+    const ItemServiceMock = require('../../services/item.service').ItemService;
+
+    mockOrderRepository = new OrderRepositoryMock() as jest.Mocked<OrderRepository>;
+    mockItemRepository = new ItemRepositoryMock() as jest.Mocked<ItemRepository>;
+    mockItemService = new ItemServiceMock() as jest.Mocked<ItemService>;
 
     orderService = new OrderService();
     (orderService as any).orderRepository = mockOrderRepository;

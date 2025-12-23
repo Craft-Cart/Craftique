@@ -50,9 +50,9 @@ export class OrderController {
       }
 
       const order = await this.orderService.getOrderById(order_id, userId);
-      res.json(order);
+      return res.json(order);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -75,9 +75,9 @@ export class OrderController {
         billingAddress: billing_address,
         notes,
       });
-      res.status(201).json(order);
+      return res.status(201).json(order);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -94,9 +94,9 @@ export class OrderController {
         status,
         notes,
       }, req.user.role);
-      res.json(order);
+      return res.json(order);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -114,9 +114,9 @@ export class OrderController {
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
 
       const order = await this.orderService.cancelOrder(order_id, user.id);
-      res.json(order);
+      return res.json(order);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -134,9 +134,9 @@ export class OrderController {
         payment_method,
         billing_data
       );
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -159,16 +159,16 @@ export class OrderController {
       }
 
       const result = await this.paymentService.handleWebhookCallback(body, hmac);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
   paymobResponse = async (req: Request, res: Response, next: NextFunction) => {
     try {
       // This is a redirect page after payment
-      const { success, id, pending, amount_cents, merchant_order_id, order, hmac } = req.query;
+      const { success, id, merchant_order_id, hmac } = req.query;
 
       // Verify HMAC if provided
       if (hmac) {

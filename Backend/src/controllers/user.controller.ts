@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/user.service';
-import { errorHandler } from '../utils/errors';
 
 export class UserController {
   private userService: UserService;
@@ -17,9 +16,9 @@ export class UserController {
         limit: limit ? parseInt(limit as string) : undefined,
         role: role as any,
       });
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -41,9 +40,9 @@ export class UserController {
 
       // Get internal user ID from auth0_id
       const user = await this.userService.getUserByAuth0Id(req.user.auth0_id);
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -56,9 +55,9 @@ export class UserController {
         phone,
         role,
       });
-      res.status(201).json(user);
+      return res.status(201).json(user);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -76,9 +75,9 @@ export class UserController {
         phone,
         address,
       });
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -109,7 +108,7 @@ export class UserController {
     }
   };
 
-  getModerators = async (req: Request, res: Response, next: NextFunction) => {
+  getModerators = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.userService.getUsers({ role: 'moderator' });
       res.json(result.users);
@@ -120,7 +119,7 @@ export class UserController {
 
   createModerator = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, name, permissions } = req.body;
+      const { email, name } = req.body;
       const user = await this.userService.createUser({
         email,
         name,
@@ -135,12 +134,11 @@ export class UserController {
   updateModerator = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { moderator_id } = req.params;
-      const { permissions } = req.body;
       // Update permissions logic would go here
       const user = await this.userService.getUserById(moderator_id);
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -155,7 +153,7 @@ export class UserController {
     }
   };
 
-  getAdmins = async (req: Request, res: Response, next: NextFunction) => {
+  getAdmins = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.userService.getUsers({ role: 'admin' });
       res.json(result.users);

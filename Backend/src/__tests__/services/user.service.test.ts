@@ -4,14 +4,28 @@ import { NotFoundError, ConflictError } from '../../utils/errors';
 import { UserRole } from '@prisma/client';
 
 // Mock the repository
-jest.mock('../../repositories/user.repository');
+jest.mock('../../repositories/user.repository', () => {
+  return {
+    UserRepository: jest.fn().mockImplementation(() => ({
+      findById: jest.fn(),
+      findByAuth0Id: jest.fn(),
+      findByEmail: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findMany: jest.fn(),
+      updateLastLogin: jest.fn(),
+    })),
+  };
+});
 
 describe('UserService', () => {
   let userService: UserService;
   let mockUserRepository: jest.Mocked<UserRepository>;
 
   beforeEach(() => {
-    mockUserRepository = new UserRepository() as jest.Mocked<UserRepository>;
+    const UserRepositoryMock = require('../../repositories/user.repository').UserRepository;
+    mockUserRepository = new UserRepositoryMock() as jest.Mocked<UserRepository>;
     userService = new UserService();
     (userService as any).userRepository = mockUserRepository;
   });

@@ -3,7 +3,6 @@ import { config } from '../config/env';
 import { UserRepository } from '../repositories/user.repository';
 import { ConflictError, AuthenticationError } from '../utils/errors';
 import { logger } from '../utils/logger';
-import { randomBytes } from 'crypto';
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -111,7 +110,7 @@ export class AuthService {
       const auth0UserId = response.data.user_id;
 
       // Create user in database
-      const user = await this.userRepository.create({
+      await this.userRepository.create({
         auth0_id: auth0UserId,
         email,
         email_verified: false,

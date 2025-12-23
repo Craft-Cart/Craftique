@@ -16,9 +16,9 @@ export class ReviewController {
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
       });
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -42,9 +42,9 @@ export class ReviewController {
         comment,
         images,
       });
-      res.status(201).json(review);
+      return res.status(201).json(review);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -67,9 +67,9 @@ export class ReviewController {
         title,
         comment,
       });
-      res.json(review);
+      return res.json(review);
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 
@@ -87,9 +87,9 @@ export class ReviewController {
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
 
       await this.reviewService.deleteReview(review_id, user.id, req.user.role);
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 

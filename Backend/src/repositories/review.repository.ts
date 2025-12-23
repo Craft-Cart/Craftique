@@ -1,4 +1,4 @@
-import { PrismaClient, Review, Prisma } from '@prisma/client';
+import { Review, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 
 export class ReviewRepository {

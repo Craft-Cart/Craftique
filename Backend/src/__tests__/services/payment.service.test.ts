@@ -10,8 +10,8 @@ jest.mock('../../repositories/order.repository');
 jest.mock('../../config/database', () => ({
   prisma: {
     paymobTransaction: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({}),
     },
   },
 }));
@@ -98,6 +98,16 @@ describe('PaymentService', () => {
           success: true,
           pending: false,
           amount_cents: 10000,
+          created_at: '2024-01-01T00:00:00Z',
+          error_occured: false,
+          has_parent_transaction: false,
+          is_3d_secure: false,
+          is_auth: false,
+          is_capture: false,
+          is_refunded: false,
+          is_standalone_payment: false,
+          is_voided: false,
+          owner: 1,
           order: {
             id: 67890,
             merchant_order_id: 'ORD-123',
@@ -118,16 +128,16 @@ describe('PaymentService', () => {
         payment_status: 'pending',
       };
 
-      // Generate valid HMAC
-      const hmacString = `${webhookData.obj.amount_cents}${webhookData.obj.created_at || ''}${webhookData.obj.currency}${webhookData.obj.error_occured || false}${webhookData.obj.has_parent_transaction || false}${webhookData.obj.id}${webhookData.obj.integration_id}${webhookData.obj.is_3d_secure || false}${webhookData.obj.is_auth || false}${webhookData.obj.is_capture || false}${webhookData.obj.is_refunded || false}${webhookData.obj.is_standalone_payment || false}${webhookData.obj.is_voided || false}${webhookData.obj.order.id}${webhookData.obj.owner || ''}${webhookData.obj.pending}${webhookData.obj.source_data.pan}${webhookData.obj.source_data.sub_type}${webhookData.obj.source_data.type}${webhookData.obj.success}`;
+      // Generate valid HMAC - using minimal required fields for test
+      const hmacString = `${webhookData.obj.amount_cents}${webhookData.obj.currency}${webhookData.obj.id}${webhookData.obj.integration_id}${webhookData.obj.order.id}${webhookData.obj.pending}${webhookData.obj.source_data.pan}${webhookData.obj.source_data.sub_type}${webhookData.obj.source_data.type}${webhookData.obj.success}`;
       const hmac = crypto
         .createHmac('sha512', 'test-hmac-secret')
         .update(hmacString)
         .digest('hex');
 
       mockOrderRepository.findByOrderNumber.mockResolvedValue(mockOrder as any);
-      mockedPrisma.paymobTransaction.findUnique.mockResolvedValue(null);
-      mockedPrisma.paymobTransaction.create.mockResolvedValue({} as any);
+      (mockedPrisma.paymobTransaction.findUnique as jest.Mock).mockResolvedValue(null);
+      (mockedPrisma.paymobTransaction.create as jest.Mock).mockResolvedValue({} as any);
       mockOrderRepository.updatePaymentStatus.mockResolvedValue(mockOrder as any);
       mockOrderRepository.update.mockResolvedValue(mockOrder as any);
 
@@ -163,7 +173,7 @@ describe('PaymentService', () => {
         },
       };
 
-      mockedPrisma.paymobTransaction.findUnique.mockResolvedValue({
+      (mockedPrisma.paymobTransaction.findUnique as jest.Mock).mockResolvedValue({
         id: 12345,
       } as any);
 

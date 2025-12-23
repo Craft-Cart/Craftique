@@ -1,4 +1,4 @@
-import { PrismaClient, Category, Prisma } from '@prisma/client';
+import { Category, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 
 export class CategoryRepository {

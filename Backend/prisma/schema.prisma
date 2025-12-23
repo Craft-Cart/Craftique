@@ -113,7 +113,6 @@ model Item {
   @@index([is_active])
   @@index([is_featured])
   @@index([sku])
-  @@check([quantity >= 0], name: "quantity_non_negative")
 }
 
 model Review {
@@ -135,7 +134,6 @@ model Review {
   @@index([item_id])
   @@index([user_id])
   @@index([is_approved])
-  @@check([rating >= 1 && rating <= 5], name: "rating_range")
 }
 
 model Order {
@@ -168,7 +166,6 @@ model Order {
   @@index([status])
   @@index([order_number])
   @@index([payment_status])
-  @@check([total >= 0], name: "total_non_negative")
 }
 
 model OrderItem {
@@ -186,8 +183,6 @@ model OrderItem {
 
   @@index([order_id])
   @@index([item_id])
-  @@check([quantity > 0], name: "quantity_positive")
-  @@check([price >= 0], name: "price_non_negative")
 }
 
 model PaymobTransaction {

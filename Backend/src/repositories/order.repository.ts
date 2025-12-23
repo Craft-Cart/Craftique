@@ -1,4 +1,4 @@
-import { PrismaClient, Order, OrderStatus, Prisma } from '@prisma/client';
+import { Order, OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 
 export class OrderRepository {

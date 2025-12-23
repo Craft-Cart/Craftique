@@ -36,7 +36,7 @@ export class AnalyticsController {
     }
   };
 
-  getProducts = async (req: Request, res: Response, next: NextFunction) => {
+  getProducts = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.analyticsService.getProductAnalytics();
       res.json(result);
@@ -45,7 +45,7 @@ export class AnalyticsController {
     }
   };
 
-  getCustomers = async (req: Request, res: Response, next: NextFunction) => {
+  getCustomers = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.analyticsService.getCustomerAnalytics();
       res.json(result);

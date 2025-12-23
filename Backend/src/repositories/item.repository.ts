@@ -1,4 +1,4 @@
-import { PrismaClient, Item, Prisma } from '@prisma/client';
+import { Item, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
 
 export class ItemRepository {
