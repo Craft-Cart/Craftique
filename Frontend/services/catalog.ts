@@ -33,11 +33,16 @@ export class CatalogService {
 
     const data = await response.json()
     // Transform backend response to frontend format
+    // Backend returns: { items, total, page, pages }
+    // Frontend expects: { data, pagination: { page, limit, total, totalPages } }
     return {
-      items: data.items || [],
-      total: data.total || 0,
-      page: data.page || 1,
-      pages: data.pages || 1,
+      data: data.items || [],
+      pagination: {
+        page: data.page || 1,
+        limit: filters?.limit || 10,
+        total: data.total || 0,
+        totalPages: data.pages || 1,
+      },
     }
   }
 

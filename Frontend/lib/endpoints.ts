@@ -3,7 +3,19 @@
  * Centralized location for all backend API URLs
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1"
+// For server-side rendering (inside Docker), use the service name
+// For client-side (browser), use localhost
+const getApiBaseUrl = (): string => {
+  // Check if we're on the server (Node.js environment)
+  if (typeof window === 'undefined') {
+    // Server-side: use Docker service name or environment variable
+    return process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://backend:8000/api/v1"
+  }
+  // Client-side: use localhost (accessible from browser)
+  return process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1"
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 export const API_ENDPOINTS = {
   // Auth endpoints
