@@ -1,0 +1,116 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: craftique-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: craftique
+      POSTGRES_PASSWORD: craftique_password_change_in_production
+      POSTGRES_DB: craftique
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U craftique"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - craftique-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: craftique-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      API_BASE_URL: http://localhost:8000/api/v1
+      DATABASE_URL: postgresql://craftique:craftique_password_change_in_production@postgres:5432/craftique?schema=public
+      # Auth0 - Set these in .env or override
+      AUTH0_DOMAIN: ${AUTH0_DOMAIN:-your-tenant.auth0.com}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET:-}
+      AUTH0_AUDIENCE: ${AUTH0_AUDIENCE:-}
+      AUTH0_ISSUER: ${AUTH0_ISSUER:-}
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      # Cookies
+      COOKIE_SECRET: ${COOKIE_SECRET:-change-this-secret-in-production}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-strict}
+      # Paymob
+      PAYMOB_API_KEY: ${PAYMOB_API_KEY:-}
+      PAYMOB_INTEGRATION_ID: ${PAYMOB_INTEGRATION_ID:-}
+      PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:-}
+      PAYMOB_CALLBACK_URL: ${PAYMOB_CALLBACK_URL:-http://localhost:8000/api/v1/payments/paymob/callback}
+      # SendGrid (Optional)
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@yourstore.com}
+      # Security
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-100}
+      # Frontend
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - craftique-network
+    volumes:
+      # Mount .env file if you want to override environment variables
+      - ./Backend/.env:/app/.env:ro
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 5 &&
+        npx prisma db push --accept-data-loss --skip-generate || echo 'Migration failed, continuing...' &&
+        node dist/server.js
+      "
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+    container_name: craftique-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # Server-side API URL (for SSR inside Docker)
+      API_BASE_URL: http://backend:8000/api/v1
+      # Client-side API URL (for browser)
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+      # Auth0 (if using on frontend)
+      NEXT_PUBLIC_AUTH0_DOMAIN: ${NEXT_PUBLIC_AUTH0_DOMAIN:-}
+      NEXT_PUBLIC_AUTH0_CLIENT_ID: ${NEXT_PUBLIC_AUTH0_CLIENT_ID:-}
+      NEXT_PUBLIC_AUTH0_AUDIENCE: ${NEXT_PUBLIC_AUTH0_AUDIENCE:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - craftique-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  craftique-network:
+    driver: bridge
+

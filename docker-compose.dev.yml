@@ -1,0 +1,42 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"  # Expose for local development tools
+
+  backend:
+    build:
+      target: builder  # Use builder stage for development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./Backend/src:/app/src:ro
+      - ./Backend/prisma:/app/prisma:ro
+      - ./Backend/package.json:/app/package.json:ro
+      - ./Backend/tsconfig.json:/app/tsconfig.json:ro
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        sleep 5 &&
+        npx prisma generate &&
+        npx prisma migrate dev --name init &&
+        npm run dev
+      "
+    # Override to use nodemon for hot reload
+    # Note: This requires nodemon to be in dependencies, not devDependencies
+
+  frontend:
+    build:
+      target: builder  # Use builder stage for development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./Frontend:/app:ro
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
