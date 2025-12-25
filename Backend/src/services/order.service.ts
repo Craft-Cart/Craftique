@@ -36,7 +36,10 @@ export class OrderService {
     userId?: string;
     status?: string;
   }) {
-    return this.orderRepository.findMany(options);
+    return this.orderRepository.findMany({
+      ...options,
+      status: options.status as any, // Type assertion for OrderStatus enum
+    });
   }
 
   async createOrder(userId: string, data: {
@@ -115,17 +118,8 @@ export class OrderService {
       notes: data.notes,
     });
 
-    // Create order items for relational queries
-    const orderItemsData = orderItems.map(oi => ({
-      order_id: order.id,
-      item_id: oi.item_id,
-      name: oi.name,
-      quantity: oi.quantity,
-      price: oi.price,
-      total: oi.total,
-    }));
-
-    // Note: In a real implementation, you'd use Prisma's nested create
+    // Note: Order items are stored as JSON snapshot in the order.items field
+    // In a real implementation, you'd also create OrderItem records for relational queries
     // This is simplified for clarity
 
     return order;

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
-import { verifyJWT, requireRole, requireOwnership } from '../middleware/auth';
+import { verifyJWT, requireRole } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validation';
 import {
   createUserSchema,

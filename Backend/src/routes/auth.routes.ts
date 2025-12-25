@@ -6,7 +6,6 @@ import {
   registerSchema,
   refreshTokenSchema,
   forgotPasswordSchema,
-  resetPasswordSchema,
 } from '../validators/schemas';
 
 const router = Router();

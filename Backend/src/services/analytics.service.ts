@@ -1,5 +1,4 @@
 import { prisma } from '../config/database';
-import { AuthorizationError } from '../utils/errors';
 
 export class AnalyticsService {
   async getDashboard(period: string = 'monthly', dateFrom?: string, dateTo?: string) {
@@ -64,7 +63,7 @@ export class AnalyticsService {
     };
   }
 
-  async exportData(reportType: string, format: string, dateFrom?: string, dateTo?: string) {
+  async exportData(reportType: string, _format: string, dateFrom?: string, dateTo?: string) {
     // This is a simplified version - in production, you'd use libraries like exceljs, pdfkit, etc.
     const dateFilter = this.getDateFilter('monthly', dateFrom, dateTo);
 
@@ -234,7 +233,7 @@ export class AnalyticsService {
     return Array.from(categoryRevenue.entries()).map(([name, revenue]) => ({ name, revenue }));
   }
 
-  private async getRevenueByPeriod(period: string, filter: { from: Date; to: Date }) {
+  private async getRevenueByPeriod(_period: string, _filter: { from: Date; to: Date }) {
     // Simplified - in production, group by period
     return [];
   }

@@ -58,13 +58,17 @@ describe('Validation Middleware', () => {
         age: -5,
       };
 
-      validateBody(schema)(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError));
+      try {
+        validateBody(schema)(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockNext
+        );
+        // If validation passes, test should fail
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ValidationError);
+      }
     });
 
     it('should reject unknown properties (prevent mass assignment)', () => {
@@ -75,13 +79,17 @@ describe('Validation Middleware', () => {
         is_admin: true, // Unknown property
       };
 
-      validateBody(schema)(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError));
+      try {
+        validateBody(schema)(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockNext
+        );
+        // If no error thrown, test should fail
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ValidationError);
+      }
     });
   });
 
@@ -150,13 +158,17 @@ describe('Validation Middleware', () => {
         id: 'invalid-uuid',
       };
 
-      validateParams(schema)(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError));
+      try {
+        validateParams(schema)(
+          mockRequest as Request,
+          mockResponse as Response,
+          mockNext
+        );
+        // If validation passes, test should fail
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ValidationError);
+      }
     });
   });
 });

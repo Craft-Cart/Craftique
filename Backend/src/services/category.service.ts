@@ -51,7 +51,7 @@ export class CategoryService {
       name: data.name,
       slug,
       description: data.description,
-      parent_id: data.parentId,
+      parent: data.parentId ? { connect: { id: data.parentId } } : undefined,
       image_url: data.imageUrl,
       is_active: true,
     });

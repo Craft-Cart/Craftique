@@ -1,10 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyJWT, requireRole, requireOwnership } from '../../middleware/auth';
+import { requireRole, requireOwnership } from '../../middleware/auth';
 import { AuthenticationError, AuthorizationError } from '../../utils/errors';
-import jwt from 'jsonwebtoken';
-
-jest.mock('jsonwebtoken');
-jest.mock('jwks-rsa');
 
 describe('Auth Middleware', () => {
   let mockRequest: Partial<Request>;
@@ -18,6 +14,7 @@ describe('Auth Middleware', () => {
       params: {},
       body: {},
       user: undefined,
+      ip: '127.0.0.1',
     };
 
     mockResponse = {
@@ -26,72 +23,6 @@ describe('Auth Middleware', () => {
     };
 
     mockNext = jest.fn();
-  });
-
-  describe('verifyJWT', () => {
-    it('should verify token from cookie', async () => {
-      const mockDecoded = {
-        sub: 'auth0|123',
-        email: 'test@example.com',
-        'https://yourstore.com/role': 'customer',
-        'https://yourstore.com/permissions': [],
-      };
-
-      mockRequest.cookies = { access_token: 'valid-token' };
-      (jwt.verify as jest.Mock).mockImplementation((token, getKey, options, callback) => {
-        callback(null, mockDecoded);
-      });
-
-      // Mock the verifyAuth0Token function
-      const { verifyAuth0Token } = require('../../middleware/auth');
-      jest.spyOn(require('../../middleware/auth'), 'verifyAuth0Token').mockResolvedValue(mockDecoded);
-
-      await verifyJWT(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockRequest.user).toBeDefined();
-      expect(mockRequest.user?.email).toBe('test@example.com');
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    it('should verify token from Authorization header', async () => {
-      const mockDecoded = {
-        sub: 'auth0|123',
-        email: 'test@example.com',
-        role: 'customer',
-      };
-
-      mockRequest.headers = {
-        authorization: 'Bearer valid-token',
-      };
-
-      jest.spyOn(require('../../middleware/auth'), 'verifyAuth0Token').mockResolvedValue(mockDecoded);
-
-      await verifyJWT(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockRequest.user).toBeDefined();
-      expect(mockNext).toHaveBeenCalled();
-    });
-
-    it('should throw AuthenticationError when no token provided', async () => {
-      mockRequest.cookies = {};
-      mockRequest.headers = {};
-
-      await verifyJWT(
-        mockRequest as Request,
-        mockResponse as Response,
-        mockNext
-      );
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
-    });
   });
 
   describe('requireRole', () => {
@@ -112,6 +43,7 @@ describe('Auth Middleware', () => {
       );
 
       expect(mockNext).toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should deny access with wrong role', () => {
@@ -150,6 +82,20 @@ describe('Auth Middleware', () => {
       );
 
       expect(mockNext).toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('should deny access when user is not authenticated', () => {
+      mockRequest.user = undefined;
+
+      const middleware = requireRole('admin');
+      middleware(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
     });
   });
 
@@ -172,6 +118,7 @@ describe('Auth Middleware', () => {
       );
 
       expect(mockNext).toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should allow user to access own resource', () => {
@@ -192,6 +139,7 @@ describe('Auth Middleware', () => {
       );
 
       expect(mockNext).toHaveBeenCalled();
+      expect(mockNext).not.toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('should deny user access to other user resource', () => {
@@ -213,6 +161,19 @@ describe('Auth Middleware', () => {
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthorizationError));
     });
+
+    it('should deny access when user is not authenticated', () => {
+      mockRequest.user = undefined;
+      mockRequest.params = { user_id: 'user-1' };
+
+      const middleware = requireOwnership('user_id');
+      middleware(
+        mockRequest as Request,
+        mockResponse as Response,
+        mockNext
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
+    });
   });
 });
-

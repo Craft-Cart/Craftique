@@ -4,14 +4,15 @@ import { ValidationError } from '../utils/errors';
 
 // Middleware to validate request body
 export const validateBody = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
-      // Use strict mode to reject unknown properties (prevent mass assignment)
-      req.body = schema.strict().parse(req.body);
+      // Use passthrough to reject unknown properties (prevent mass assignment)
+      const strictSchema = (schema as any).strict ? (schema as any).strict() : schema;
+      req.body = strictSchema.parse(req.body);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.errors.map(err => ({
+        const details = error.issues.map((err: any) => ({
           path: err.path.join('.'),
           message: err.message,
         }));
@@ -24,13 +25,14 @@ export const validateBody = (schema: ZodSchema) => {
 
 // Middleware to validate query parameters
 export const validateQuery = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
-      req.query = schema.strict().parse(req.query);
+      const strictSchema = (schema as any).strict ? (schema as any).strict() : schema;
+      req.query = strictSchema.parse(req.query);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.errors.map(err => ({
+        const details = error.issues.map((err: any) => ({
           path: err.path.join('.'),
           message: err.message,
         }));
@@ -43,13 +45,14 @@ export const validateQuery = (schema: ZodSchema) => {
 
 // Middleware to validate route parameters
 export const validateParams = (schema: ZodSchema) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     try {
-      req.params = schema.strict().parse(req.params);
+      const strictSchema = (schema as any).strict ? (schema as any).strict() : schema;
+      req.params = strictSchema.parse(req.params);
       next();
     } catch (error) {
       if (error instanceof ZodError) {
-        const details = error.errors.map(err => ({
+        const details = error.issues.map((err: any) => ({
           path: err.path.join('.'),
           message: err.message,
         }));

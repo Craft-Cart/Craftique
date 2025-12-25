@@ -49,7 +49,7 @@ export class ConflictError extends AppError {
   }
 }
 
-export const errorHandler = (err: Error, req: any, res: Response, next: any) => {
+export const errorHandler = (err: Error, req: any, res: Response, _next: any) => {
   // Log error details internally
   logger.error('Error occurred', {
     error: {
@@ -67,35 +67,39 @@ export const errorHandler = (err: Error, req: any, res: Response, next: any) => 
 
   // Don't leak error details in production
   if (config.nodeEnv === 'production' && !(err instanceof AppError)) {
-    return res.status(500).json({
+    res.status(500).json({
       error: 'Internal Server Error',
       message: 'An unexpected error occurred',
     });
+    return;
   }
 
   // Handle known errors
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+    res.status(err.statusCode).json({
       error: err.constructor.name.replace('Error', ''),
       message: err.message,
       ...(err instanceof ValidationError && err.details ? { details: err.details } : {}),
     });
+    return;
   }
 
   // Handle Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
     const prismaError = err as any;
     if (prismaError.code === 'P2002') {
-      return res.status(409).json({
+      res.status(409).json({
         error: 'Conflict',
         message: 'A record with this value already exists',
       });
+      return;
     }
     if (prismaError.code === 'P2025') {
-      return res.status(404).json({
+      res.status(404).json({
         error: 'NotFound',
         message: 'Record not found',
       });
+      return;
     }
   }
 

@@ -16,7 +16,7 @@ export class PaymentService {
   /**
    * Request payment key from Paymob
    */
-  async requestPaymentKey(orderId: string, paymentMethod: string, billingData?: any) {
+  async requestPaymentKey(orderId: string, _paymentMethod: string, billingData?: any) {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
       throw new NotFoundError('Order');
@@ -132,9 +132,31 @@ export class PaymentService {
     let hmacString = '';
 
     if (data) {
-      // For webhook verification
+      // For webhook verification - use available fields
       const obj = data.obj || data;
-      hmacString = `${obj.amount_cents}${obj.created_at}${obj.currency}${obj.error_occured}${obj.has_parent_transaction}${obj.id}${obj.integration_id}${obj.is_3d_secure}${obj.is_auth}${obj.is_capture}${obj.is_refunded}${obj.is_standalone_payment}${obj.is_voided}${obj.order.id}${obj.owner}${obj.pending}${obj.source_data.pan}${obj.source_data.sub_type}${obj.source_data.type}${obj.success}`;
+      const fields = [
+        obj.amount_cents,
+        obj.created_at || '',
+        obj.currency,
+        obj.error_occured || false,
+        obj.has_parent_transaction || false,
+        obj.id,
+        obj.integration_id,
+        obj.is_3d_secure || false,
+        obj.is_auth || false,
+        obj.is_capture || false,
+        obj.is_refunded || false,
+        obj.is_standalone_payment || false,
+        obj.is_voided || false,
+        obj.order?.id || '',
+        obj.owner || '',
+        obj.pending,
+        obj.source_data?.pan || '',
+        obj.source_data?.sub_type || '',
+        obj.source_data?.type || '',
+        obj.success,
+      ];
+      hmacString = fields.join('');
     } else if (orderId && paymentToken) {
       // For payment key generation
       hmacString = `${orderId}${paymentToken}`;

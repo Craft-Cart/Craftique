@@ -39,7 +39,7 @@ const getKey = (header: any, callback: any) => {
 };
 
 // Verify JWT token from Auth0
-export const verifyAuth0Token = async (token: string): Promise<any> => {
+export async function verifyAuth0Token(token: string): Promise<any> {
   return new Promise((resolve, reject) => {
     jwt.verify(
       token,
@@ -58,10 +58,10 @@ export const verifyAuth0Token = async (token: string): Promise<any> => {
       }
     );
   });
-};
+}
 
 // Middleware to verify JWT token from HttpOnly cookie
-export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
+export const verifyJWT = async (req: Request, _res: Response, next: NextFunction) => {
   try {
     // Try to get token from cookie first (HttpOnly cookie)
     let token = req.cookies?.access_token;
@@ -109,13 +109,13 @@ export const verifyJWT = async (req: Request, res: Response, next: NextFunction)
 
 // Middleware to require specific role
 export const requireRole = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
-      throw new AuthenticationError('Authentication required');
+      return next(new AuthenticationError('Authentication required'));
     }
 
     if (!roles.includes(req.user.role)) {
-      throw new AuthorizationError(`Required role: ${roles.join(' or ')}`);
+      return next(new AuthorizationError(`Required role: ${roles.join(' or ')}`));
     }
 
     next();
@@ -124,7 +124,7 @@ export const requireRole = (...roles: string[]) => {
 
 // Middleware to require specific permission
 export const requirePermission = (...permissions: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
     }
@@ -143,9 +143,9 @@ export const requirePermission = (...permissions: string[]) => {
 
 // Middleware to check resource ownership
 export const requireOwnership = (userIdParam: string = 'user_id') => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
-      throw new AuthenticationError('Authentication required');
+      return next(new AuthenticationError('Authentication required'));
     }
 
     // Admin and moderators can access any resource
@@ -156,7 +156,7 @@ export const requireOwnership = (userIdParam: string = 'user_id') => {
     // Check if user owns the resource
     const resourceUserId = req.params[userIdParam] || req.body[userIdParam];
     if (resourceUserId && resourceUserId !== req.user.id) {
-      throw new AuthorizationError('Access denied: You can only access your own resources');
+      return next(new AuthorizationError('Access denied: You can only access your own resources'));
     }
 
     next();

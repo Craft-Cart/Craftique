@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { AuthService } from '../services/auth.service';
 import { setAuthCookie, clearAuthCookies } from '../middleware/cookies';
-import { errorHandler } from '../utils/errors';
 
 export class AuthController {
   private authService: AuthService;
@@ -54,7 +53,8 @@ export class AuthController {
     try {
       const refreshToken = req.body.refresh_token || req.cookies?.refresh_token;
       if (!refreshToken) {
-        return res.status(400).json({ error: 'Refresh token required' });
+        res.status(400).json({ error: 'Refresh token required' });
+        return;
       }
 
       const result = await this.authService.refreshToken(refreshToken);
@@ -68,7 +68,7 @@ export class AuthController {
     }
   };
 
-  logout = async (req: Request, res: Response, next: NextFunction) => {
+  logout = async (_req: Request, res: Response, next: NextFunction) => {
     try {
       clearAuthCookies(res);
       res.json({ message: 'Logged out successfully' });
@@ -81,7 +81,8 @@ export class AuthController {
     try {
       const token = req.cookies?.access_token || req.headers.authorization?.replace('Bearer ', '');
       if (!token) {
-        return res.status(401).json({ error: 'Token required' });
+        res.status(401).json({ error: 'Token required' });
+        return;
       }
 
       const result = await this.authService.verifyToken(token);
