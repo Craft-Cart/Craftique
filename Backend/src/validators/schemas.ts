@@ -127,7 +127,7 @@ export const createItemSchema = z.object({
     width: z.number().positive().optional(),
     height: z.number().positive().optional(),
   }).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 }).strict();
 
 export const updateItemSchema = z.object({
