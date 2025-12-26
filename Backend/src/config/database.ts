@@ -23,3 +23,6 @@ process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
 
+// Export PrismaClient for use in services
+export { PrismaClient };
+

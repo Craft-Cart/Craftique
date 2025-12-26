@@ -68,4 +68,27 @@ export const API_ENDPOINTS = {
     paymobCallback: `${API_BASE_URL}/payments/paymob/callback`,
     paymobResponse: `${API_BASE_URL}/payments/paymob/response`,
   },
+
+  // Wishlist endpoints
+  wishlist: {
+    list: `${API_BASE_URL}/wishlist`,
+    add: `${API_BASE_URL}/wishlist`,
+    remove: (id: string) => `${API_BASE_URL}/wishlist/${id}`,
+  },
+
+  // Notification endpoints
+  notifications: {
+    list: `${API_BASE_URL}/notifications`,
+    markRead: (id: string) => `${API_BASE_URL}/notifications/${id}/read`,
+    markAllRead: `${API_BASE_URL}/notifications/read-all`,
+    delete: (id: string) => `${API_BASE_URL}/notifications/${id}`,
+  },
+
+  // Inventory endpoints
+  inventory: {
+    logs: `${API_BASE_URL}/inventory/logs`,
+    adjust: `${API_BASE_URL}/inventory/adjust`,
+    bulkUpdate: `${API_BASE_URL}/inventory/bulk-update`,
+    lowStock: `${API_BASE_URL}/inventory/low-stock`,
+  },
 } as const

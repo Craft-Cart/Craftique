@@ -16,6 +16,9 @@ import paymentRoutes from './routes/payment.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import moderatorRoutes from './routes/moderator.routes';
 import adminRoutes from './routes/admin.routes';
+import wishlistRoutes from './routes/wishlist.routes';
+import notificationRoutes from './routes/notification.routes';
+import inventoryRoutes from './routes/inventory.routes';
 
 const app: Express = express();
 
@@ -61,6 +64,9 @@ app.use('/api/v1', reviewRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/wishlist', wishlistRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/inventory', inventoryRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

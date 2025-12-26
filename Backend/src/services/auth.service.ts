@@ -223,6 +223,121 @@ export class AuthService {
     }
   }
 
+  // Social login methods
+  async getSocialAuthUrl(provider: string, redirectUri?: string) {
+    const baseUrl = redirectUri || `${config.apiBaseUrl}/auth/callback`;
+    
+    const authUrls = {
+      google: `https://${config.auth0.domain}/authorize?` +
+        `response_type=code&` +
+        `client_id=${config.auth0.clientId}&` +
+        `redirect_uri=${encodeURIComponent(baseUrl)}&` +
+        `scope=openid profile email&` +
+        `connection=google-oauth2&` +
+        `state=${this.generateState()}`,
+      
+      facebook: `https://${config.auth0.domain}/authorize?` +
+        `response_type=code&` +
+        `client_id=${config.auth0.clientId}&` +
+        `redirect_uri=${encodeURIComponent(baseUrl)}&` +
+        `scope=openid profile email&` +
+        `connection=facebook&` +
+        `state=${this.generateState()}`,
+    };
+
+    const authUrl = authUrls[provider as keyof typeof authUrls];
+    if (!authUrl) {
+      throw new Error(`Unsupported social provider: ${provider}`);
+    }
+
+    return {
+      auth_url: authUrl,
+      provider,
+    };
+  }
+
+  async handleSocialCallback(provider: string, code: string, _state: string) {
+    try {
+      // Exchange authorization code for tokens
+      const tokenResponse = await axios.post(
+        `https://${config.auth0.domain}/oauth/token`,
+        {
+          grant_type: 'authorization_code',
+          client_id: config.auth0.clientId,
+          client_secret: config.auth0.clientSecret,
+          code,
+          redirect_uri: `${config.apiBaseUrl}/auth/callback`,
+        }
+      );
+
+      const { access_token, refresh_token, expires_in } = tokenResponse.data;
+
+      // Get user info from Auth0
+      const userInfo = await axios.get(
+        `https://${config.auth0.domain}/userinfo`,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+
+      // Find or create user in database
+      let user = await this.userRepository.findByAuth0Id(userInfo.data.sub);
+      
+      if (!user) {
+        // Create user if doesn't exist
+        user = await this.userRepository.create({
+          auth0_id: userInfo.data.sub,
+          email: userInfo.data.email,
+          email_verified: userInfo.data.email_verified || false,
+          name: userInfo.data.name || userInfo.data.nickname || userInfo.data.email.split('@')[0],
+          role: 'customer',
+          permissions: [],
+        });
+      } else {
+        // Update last login
+        await this.userRepository.updateLastLogin(user.id);
+      }
+
+      return {
+        access_token,
+        refresh_token,
+        token_type: 'Bearer',
+        expires_in,
+        user,
+      };
+    } catch (error: any) {
+      logger.error('Social callback failed', { error: error.message, provider });
+      throw new AuthenticationError('Social authentication failed');
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const response = await axios.post(
+        `https://${config.auth0.domain}/dbconnections/change_password`,
+        {
+          client_id: config.auth0.clientId,
+          email: token, // In a real implementation, this would be user's email
+          password: newPassword,
+          connection: 'Username-Password-Authentication',
+        }
+      );
+
+      console.log('Password reset response:', response.data);
+      return { message: 'Password reset successfully' };
+    } catch (error: any) {
+      logger.error('Password reset failed', { error: error.message });
+      throw new AuthenticationError('Password reset failed');
+    }
+  }
+
+  private generateState(): string {
+    return Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
+  }
+
   private async getAuth0ManagementToken(): Promise<string> {
     // This should be cached in production
     const response = await axios.post(
