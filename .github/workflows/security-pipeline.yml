@@ -6,7 +6,7 @@ name: Security Pipeline
 
 on:
   push:
-    branches: [main, ci/initial-pipeline]
+    branches: [main]
   pull_request:
     branches: [main]
 
