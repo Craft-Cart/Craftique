@@ -142,7 +142,7 @@ jobs:
       # Frontend Build & Test
       - name: Install Frontend dependencies
         working-directory: Frontend
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Build Frontend
         working-directory: Frontend
