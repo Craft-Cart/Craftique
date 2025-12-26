@@ -73,33 +73,15 @@ jobs:
         uses: semgrep/semgrep-action@v1
         with:
           config: p/security-audit p/owasp-top-ten p/nodejs p/typescript
-          generateSarif: true
-        env:
-          SEMGREP_SARIF_FILE: semgrep.sarif
-
-      - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('semgrep.sarif') != ''
-        with:
-          sarif_file: semgrep.sarif
-          category: sast
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          format: 'table'
           severity: 'CRITICAL,HIGH'
         continue-on-error: true
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-results.sarif') != ''
-        with:
-          sarif_file: 'trivy-results.sarif'
-          category: 'sca-iac'
 
   # ============================================
   # Stage 3: Build & Test (Combined Backend + Frontend)
@@ -128,7 +110,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.npm
-          key: ${{ runner.os }}-npm-${{ hashFiles('Backend/package-lock.json', 'Backend/package.json') }}
+          key: ${{ runner.os }}-npm-${{ hashFiles('Backend/package-lock.json') }}
           restore-keys: ${{ runner.os }}-npm-
 
       - name: Cache pnpm store
