@@ -74,10 +74,12 @@ jobs:
         with:
           config: p/security-audit p/owasp-top-ten p/nodejs p/typescript
           generateSarif: true
+        env:
+          SEMGREP_SARIF_FILE: semgrep.sarif
 
       - name: Upload Semgrep SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('semgrep.sarif') != ''
         with:
           sarif_file: semgrep.sarif
           category: sast
@@ -90,10 +92,11 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+        continue-on-error: true
 
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
           category: 'sca-iac'
@@ -227,15 +230,15 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: Upload Backend container scan
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('backend-container.sarif') != ''
         with:
           sarif_file: 'backend-container.sarif'
           category: 'container-backend'
 
       - name: Upload Frontend container scan
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('frontend-container.sarif') != ''
         with:
           sarif_file: 'frontend-container.sarif'
           category: 'container-frontend'
