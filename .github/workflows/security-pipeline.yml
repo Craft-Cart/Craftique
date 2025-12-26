@@ -10,14 +10,13 @@ on:
   pull_request:
     branches: [master]
 
-
 # Cancel in-progress runs when a new commit is pushed (saves minutes)
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
   # GCP Artifact Registry configuration
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'craftique-project' }}
   GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
@@ -82,21 +81,21 @@ jobs:
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "table"
+          severity: "CRITICAL,HIGH"
         continue-on-error: true
 
       # ========== License Compliance Scanning ==========
       - name: Run Trivy License Scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'json'
-          output: 'license-report.json'
-          scanners: 'license'
+          scan-type: "fs"
+          scan-ref: "."
+          format: "json"
+          output: "license-report.json"
+          scanners: "license"
         continue-on-error: true
 
       - name: Generate License Compliance Report
@@ -155,7 +154,7 @@ jobs:
             "SSPL-1.0"
             "Commons Clause"
           )
-          
+
           if [ -f license-report.json ]; then
             for license in "${PROHIBITED_LICENSES[@]}"; do
               COUNT=$(jq -r "[.Results[]?.Licenses // [] | .[] | select(.Name == \"$license\")] | length" license-report.json)
@@ -165,7 +164,7 @@ jobs:
               fi
             done
           fi
-        continue-on-error: true  # Set to false to enforce license compliance
+        continue-on-error: true # Set to false to enforce license compliance
 
   # ============================================
   # Stage 3: Build & Test (Combined Backend + Frontend)
@@ -281,32 +280,32 @@ jobs:
       - name: Scan Backend container
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'backend:scan'
-          format: 'sarif'
-          output: 'backend-container.sarif'
-          severity: 'CRITICAL,HIGH'
+          image-ref: "backend:scan"
+          format: "sarif"
+          output: "backend-container.sarif"
+          severity: "CRITICAL,HIGH"
 
       - name: Scan Frontend container
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'frontend:scan'
-          format: 'sarif'
-          output: 'frontend-container.sarif'
-          severity: 'CRITICAL,HIGH'
+          image-ref: "frontend:scan"
+          format: "sarif"
+          output: "frontend-container.sarif"
+          severity: "CRITICAL,HIGH"
 
       - name: Upload Backend container scan
         uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('backend-container.sarif') != ''
         with:
-          sarif_file: 'backend-container.sarif'
-          category: 'container-backend'
+          sarif_file: "backend-container.sarif"
+          category: "container-backend"
 
       - name: Upload Frontend container scan
         uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('frontend-container.sarif') != ''
         with:
-          sarif_file: 'frontend-container.sarif'
-          category: 'container-frontend'
+          sarif_file: "frontend-container.sarif"
+          category: "container-frontend"
 
       # Generate SBOM in same job to avoid extra runner
       - name: Generate Backend SBOM
@@ -327,19 +326,19 @@ jobs:
       - name: Scan Backend container licenses
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'backend:scan'
-          format: 'json'
-          output: 'backend-container-licenses.json'
-          scanners: 'license'
+          image-ref: "backend:scan"
+          format: "json"
+          output: "backend-container-licenses.json"
+          scanners: "license"
         continue-on-error: true
 
       - name: Scan Frontend container licenses
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'frontend:scan'
-          format: 'json'
-          output: 'frontend-container-licenses.json'
-          scanners: 'license'
+          image-ref: "frontend:scan"
+          format: "json"
+          output: "frontend-container-licenses.json"
+          scanners: "license"
         continue-on-error: true
 
       - name: Analyze Container License Compliance
@@ -347,13 +346,13 @@ jobs:
         run: |
           echo "## 🐳 Container License Compliance" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Backend licenses
           if [ -f backend-container-licenses.json ]; then
             BACKEND_TOTAL=$(jq '[.Results[]?.Licenses // [] | .[]] | length' backend-container-licenses.json)
             echo "**Backend Container Licenses:** $BACKEND_TOTAL" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           # Frontend licenses
           if [ -f frontend-container-licenses.json ]; then
             FRONTEND_TOTAL=$(jq '[.Results[]?.Licenses // [] | .[]] | length' frontend-container-licenses.json)
@@ -365,7 +364,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sbom-artifacts
-          path: '*-sbom.json'
+          path: "*-sbom.json"
           retention-days: 30
 
       - name: Upload Container License Reports
@@ -373,7 +372,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: container-license-reports
-          path: '*-container-licenses.json'
+          path: "*-container-licenses.json"
           retention-days: 30
 
   # ============================================
@@ -404,7 +403,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: Backend/package-lock.json
 
       - name: Setup and start Backend
@@ -437,7 +436,7 @@ jobs:
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: 'http://localhost:8000/health'
+          target: "http://localhost:8000/health"
           allow_issue_writing: false
         continue-on-error: true
 
@@ -466,17 +465,17 @@ jobs:
           echo "Quick Scan: ${{ needs.security-quick-scan.result }}"
           echo "Code Analysis: ${{ needs.code-analysis.result }}"
           echo "Build & Test: ${{ needs.build-and-test.result }}"
-          
+
           if [ "${{ needs.security-quick-scan.result }}" == "failure" ]; then
             echo "❌ CRITICAL: Secrets detected!"
             exit 1
           fi
-          
+
           if [ "${{ needs.build-and-test.result }}" == "failure" ]; then
             echo "❌ Build or tests failed!"
             exit 1
           fi
-          
+
           echo "✅ Security gate passed"
 
       - name: Comment on PR
@@ -500,184 +499,182 @@ jobs:
   # Stage 7: Build, Sign & Push with Supply Chain Security
   # Implements: Image signing (cosign), SLSA Provenance, Digest pinning
   # ============================================
-  # supply-chain-security:
-  #   name: 🔏 Supply Chain Security
-  #   runs-on: ubuntu-latest
-  #   timeout-minutes: 20
-  #   needs: [security-gate, container-security]
-  #   if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.security-gate.result == 'success'
-  #   environment: production
-  #   permissions:
-  #     contents: read
-  #     packages: write
-  #     id-token: write  # Required for cosign keyless signing
-  #     attestations: write  # Required for SLSA provenance
-  #   outputs:
-  #     backend-digest: ${{ steps.build-backend.outputs.digest }}
-  #     frontend-digest: ${{ steps.build-frontend.outputs.digest }}
-  #     backend-image: ${{ steps.set-outputs.outputs.backend-image }}
-  #     frontend-image: ${{ steps.set-outputs.outputs.frontend-image }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  supply-chain-security:
+    name: 🔏 Supply Chain Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [security-gate, container-security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.security-gate.result == 'success'
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Required for cosign keyless signing
+      attestations: write # Required for SLSA provenance
+    outputs:
+      backend-digest: ${{ steps.build-backend.outputs.digest }}
+      frontend-digest: ${{ steps.build-frontend.outputs.digest }}
+      backend-image: ${{ steps.set-outputs.outputs.backend-image }}
+      frontend-image: ${{ steps.set-outputs.outputs.frontend-image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Docker Buildx
-  #       uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-  #     - name: Install cosign
-  #       uses: sigstore/cosign-installer@v3.7.0
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.7.0
 
-  #     # Authenticate to GCP using Workload Identity Federation (keyless)
-  #     - name: Authenticate to Google Cloud
-  #       id: auth
-  #       uses: google-github-actions/auth@v2
-  #       with:
-  #         workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-  #         service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-  #         token_format: access_token
+      # Authenticate to GCP using Workload Identity Federation (keyless)
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-  #     - name: Login to GCP Artifact Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ${{ env.DOCKER_REGISTRY }}
-  #         username: oauth2accesstoken
-  #         password: ${{ steps.auth.outputs.access_token }}
+      - name: Login to GCP Artifact Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
 
-  #     # ========== Backend Image ==========
-  #     - name: Build and push Backend
-  #       id: build-backend
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: Backend
-  #         push: true
-  #         tags: |
-  #           ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
-  #           ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}:latest
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
-  #         provenance: true
-  #         sbom: true
+      # ========== Backend Image ==========
+      - name: Build and push Backend
+        id: build-backend
+        uses: docker/build-push-action@v5
+        with:
+          context: Backend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
-  #     - name: Sign Backend image with cosign (keyless)
-  #       env:
-  #         DIGEST: ${{ steps.build-backend.outputs.digest }}
-  #         TAGS: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #       run: |
-  #         echo "Signing backend image..."
-  #         cosign sign --yes "${TAGS}@${DIGEST}"
+      - name: Sign Backend image with cosign (keyless)
+        env:
+          DIGEST: ${{ steps.build-backend.outputs.digest }}
+          TAGS: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+        run: |
+          echo "Signing backend image..."
+          cosign sign --yes "${TAGS}@${DIGEST}"
 
-  #     - name: Generate Backend SLSA Provenance Attestation
-  #       uses: actions/attest-build-provenance@v2
-  #       with:
-  #         subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #         subject-digest: ${{ steps.build-backend.outputs.digest }}
-  #         push-to-registry: true
+      - name: Generate Backend SLSA Provenance Attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+          subject-digest: ${{ steps.build-backend.outputs.digest }}
+          push-to-registry: true
 
-  #     - name: Generate Backend SBOM Attestation
-  #       uses: actions/attest-sbom@v2
-  #       with:
-  #         subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #         subject-digest: ${{ steps.build-backend.outputs.digest }}
-  #         sbom-path: backend-sbom.json
-  #         push-to-registry: true
-  #       continue-on-error: true
+      - name: Generate Backend SBOM Attestation
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+          subject-digest: ${{ steps.build-backend.outputs.digest }}
+          sbom-path: backend-sbom.json
+          push-to-registry: true
+        continue-on-error: true
 
-  #     # ========== Frontend Image ==========
-  #     - name: Build and push Frontend
-  #       id: build-frontend
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: Frontend
-  #         push: true
-  #         tags: |
-  #           ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
-  #           ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}:latest
-  #         cache-from: type=gha
-  #         cache-to: type=gha,mode=max
-  #         build-args: |
-  #           NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://craftique.chickenkiller.com/api/v1' }}
-  #         provenance: true
-  #         sbom: true
+      # ========== Frontend Image ==========
+      - name: Build and push Frontend
+        id: build-frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: Frontend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL || 'https://craftique.chickenkiller.com/api/v1' }}
+          provenance: true
+          sbom: true
 
-  #     - name: Sign Frontend image with cosign (keyless)
-  #       env:
-  #         DIGEST: ${{ steps.build-frontend.outputs.digest }}
-  #         TAGS: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #       run: |
-  #         echo "Signing frontend image..."
-  #         cosign sign --yes "${TAGS}@${DIGEST}"
+      - name: Sign Frontend image with cosign (keyless)
+        env:
+          DIGEST: ${{ steps.build-frontend.outputs.digest }}
+          TAGS: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+        run: |
+          echo "Signing frontend image..."
+          cosign sign --yes "${TAGS}@${DIGEST}"
 
-  #     - name: Generate Frontend SLSA Provenance Attestation
-  #       uses: actions/attest-build-provenance@v2
-  #       with:
-  #         subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #         subject-digest: ${{ steps.build-frontend.outputs.digest }}
-  #         push-to-registry: true
+      - name: Generate Frontend SLSA Provenance Attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+          subject-digest: ${{ steps.build-frontend.outputs.digest }}
+          push-to-registry: true
 
-  #     - name: Generate Frontend SBOM Attestation
-  #       uses: actions/attest-sbom@v2
-  #       with:
-  #         subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #         subject-digest: ${{ steps.build-frontend.outputs.digest }}
-  #         sbom-path: frontend-sbom.json
-  #         push-to-registry: true
-  #       continue-on-error: true
+      - name: Generate Frontend SBOM Attestation
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+          subject-digest: ${{ steps.build-frontend.outputs.digest }}
+          sbom-path: frontend-sbom.json
+          push-to-registry: true
+        continue-on-error: true
 
-  #     # ========== Outputs for GitOps ==========
-  #     - name: Set image outputs
-  #       id: set-outputs
-  #       env:
-  #         FULL_BACKEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #         FULL_FRONTEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #       run: |
-  #         echo "backend-image=${FULL_BACKEND}@${{ steps.build-backend.outputs.digest }}" >> $GITHUB_OUTPUT
-  #         echo "frontend-image=${FULL_FRONTEND}@${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_OUTPUT
+      # ========== Outputs for GitOps ==========
+      - name: Set image outputs
+        id: set-outputs
+        env:
+          FULL_BACKEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+          FULL_FRONTEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+        run: |
+          echo "backend-image=${FULL_BACKEND}@${{ steps.build-backend.outputs.digest }}" >> $GITHUB_OUTPUT
+          echo "frontend-image=${FULL_FRONTEND}@${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_OUTPUT
 
-  #     - name: Verify Backend signature
-  #       env:
-  #         FULL_IMAGE: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #       run: |
-  #         cosign verify \
-  #           --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
-  #           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-  #           ${FULL_IMAGE}@${{ steps.build-backend.outputs.digest }}
+      - name: Verify Backend signature
+        env:
+          FULL_IMAGE: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+        run: |
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${FULL_IMAGE}@${{ steps.build-backend.outputs.digest }}
 
-  #     - name: Verify Frontend signature
-  #       env:
-  #         FULL_IMAGE: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #       run: |
-  #         cosign verify \
-  #           --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
-  #           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-  #           ${FULL_IMAGE}@${{ steps.build-frontend.outputs.digest }}
+      - name: Verify Frontend signature
+        env:
+          FULL_IMAGE: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+        run: |
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${FULL_IMAGE}@${{ steps.build-frontend.outputs.digest }}
 
-  #     - name: Supply Chain Summary
-  #       env:
-  #         FULL_BACKEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
-  #         FULL_FRONTEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
-  #       run: |
-  #         echo "## 🔏 Supply Chain Security Summary" >> $GITHUB_STEP_SUMMARY
-  #         echo "" >> $GITHUB_STEP_SUMMARY
-  #         echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Image**: \`${FULL_BACKEND}\`" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Digest**: \`${{ steps.build-backend.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Signed**: ✅ Cosign keyless" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Provenance**: ✅ SLSA Build L3" >> $GITHUB_STEP_SUMMARY
-  #         echo "" >> $GITHUB_STEP_SUMMARY
-  #         echo "### Frontend Image" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Image**: \`${FULL_FRONTEND}\`" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Digest**: \`${{ steps.build-frontend.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Signed**: ✅ Cosign keyless" >> $GITHUB_STEP_SUMMARY
-  #         echo "- **Provenance**: ✅ SLSA Build L3" >> $GITHUB_STEP_SUMMARY
-  #         echo "" >> $GITHUB_STEP_SUMMARY
-  #         echo "### Verification Commands" >> $GITHUB_STEP_SUMMARY
-  #         echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-  #         echo "# Verify backend signature" >> $GITHUB_STEP_SUMMARY
-  #         echo "cosign verify --certificate-identity-regexp='https://github.com/${{ github.repository }}/*' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' ${FULL_BACKEND}@${{ steps.build-backend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-  #         echo "" >> $GITHUB_STEP_SUMMARY
-  #         echo "# Verify frontend signature" >> $GITHUB_STEP_SUMMARY
-  #         echo "cosign verify --certificate-identity-regexp='https://github.com/${{ github.repository }}/*' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' ${FULL_FRONTEND}@${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
-  #         echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+      - name: Supply Chain Summary
+        env:
+          FULL_BACKEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.BACKEND_IMAGE }}
+          FULL_FRONTEND: ${{ env.DOCKER_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REPO }}/${{ env.FRONTEND_IMAGE }}
+        run: |
+          echo "## 🔏 Supply Chain Security Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Backend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${FULL_BACKEND}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: \`${{ steps.build-backend.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signed**: ✅ Cosign keyless" >> $GITHUB_STEP_SUMMARY
+          echo "- **Provenance**: ✅ SLSA Build L3" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Frontend Image" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: \`${FULL_FRONTEND}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest**: \`${{ steps.build-frontend.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Signed**: ✅ Cosign keyless" >> $GITHUB_STEP_SUMMARY
+          echo "- **Provenance**: ✅ SLSA Build L3" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Verification Commands" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Verify backend signature" >> $GITHUB_STEP_SUMMARY
+          echo "cosign verify --certificate-identity-regexp='https://github.com/${{ github.repository }}/*' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' ${FULL_BACKEND}@${{ steps.build-backend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Verify frontend signature" >> $GITHUB_STEP_SUMMARY
+          echo "cosign verify --certificate-identity-regexp='https://github.com/${{ github.repository }}/*' --certificate-oidc-issuer='https://token.actions.githubusercontent.com' ${FULL_FRONTEND}@${{ steps.build-frontend.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
   # # ============================================
   # # Stage 8: Update GitOps Manifests with Signed Digests
@@ -698,13 +695,13 @@ jobs:
   #     - name: Update image digests in manifests
   #       run: |
   #         cd gitops
-          
+
   #         # Update backend deployment with signed digest
   #         sed -i "s|image: .*craftique-backend.*|image: ${{ needs.supply-chain-security.outputs.backend-image }}|g" apps/backend/backend-deployment.yaml
-          
+
   #         # Update frontend deployment with signed digest
   #         sed -i "s|image: .*craftique-frontend.*|image: ${{ needs.supply-chain-security.outputs.frontend-image }}|g" apps/frontend/frontend-deplyment.yaml
-          
+
   #         echo "Updated manifests:"
   #         grep -r "image:" apps/
 
@@ -715,10 +712,9 @@ jobs:
   #         git config user.email "actions@github.com"
   #         git add -A
   #         git diff --staged --quiet || git commit -m "chore: update images to signed digests [skip ci]
-          
+
   #         Backend: ${{ needs.supply-chain-security.outputs.backend-image }}
   #         Frontend: ${{ needs.supply-chain-security.outputs.frontend-image }}
-          
+
   #         Triggered by: ${{ github.sha }}"
   #         git push
-
