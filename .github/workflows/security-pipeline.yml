@@ -104,7 +104,7 @@ jobs:
       - name: Install pnpm for Frontend
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9
 
       - name: Cache npm dependencies
         uses: actions/cache@v4
