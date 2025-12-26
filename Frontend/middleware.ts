@@ -28,6 +28,25 @@ export async function middleware(request: NextRequest) {
     }
   }
   
+  // Protect admin route
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const session = await auth0.getSession(request);
+    
+    if (!session) {
+      // Redirect to login if not authenticated
+      const loginUrl = new URL('/api/auth/login', request.url);
+      loginUrl.searchParams.set('returnTo', request.url);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    // Check if user has admin or moderator role
+    const userRole = session.user['https://yourstore.com/role'] as string;
+    if (!['admin', 'moderator'].includes(userRole)) {
+      // Redirect non-admin users to home page
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+  
   return authRes;
 }
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { UserManagement } from './user-management'
 import { OrderManagement } from './order-management'
 import { ProductManagement } from './product-management'
+import { CategoryManagement } from './category-management'
 import { AnalyticsDashboard } from './analytics'
 import { useRBAC } from '@/hooks/use-rbac'
 import { API_ENDPOINTS } from '@/lib/endpoints'
@@ -26,7 +27,10 @@ export default function AdminDashboard() {
     canAccessAdmin, 
     canManageUsers, 
     canManageItems,
-    canAccessAnalytics 
+    canManageCategories,
+    canAccessAnalytics,
+    isAdmin,
+    isModerator
   } = useRBAC()
   
   const [stats, setStats] = useState<DashboardStats>({
@@ -92,67 +96,101 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Badge variant="secondary">Administrator</Badge>
+        <h1 className="text-3xl font-bold">{isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}</h1>
+        <Badge variant="secondary">{isAdmin ? 'Administrator' : 'Moderator'}</Badge>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers}</div>
-          </CardContent>
-        </Card>
+      {/* Stats Cards - Only show for Admins */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalUsers}</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProducts}</div>
-          </CardContent>
-        </Card>
-      </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* For moderators, show only categories and products count */}
+      {isModerator && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProducts}</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Management Tabs */}
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs defaultValue={isModerator ? "categories" : "users"} className="space-y-4">
         <TabsList>
-          {canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
-          <TabsTrigger value="orders">Orders</TabsTrigger>
+          {isAdmin && canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
+          {isAdmin && <TabsTrigger value="orders">Orders</TabsTrigger>}
+          {canManageCategories && <TabsTrigger value="categories">Categories</TabsTrigger>}
           {canManageItems && <TabsTrigger value="products">Products</TabsTrigger>}
-          {canAccessAnalytics && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {isAdmin && canAccessAnalytics && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
         </TabsList>
 
-        {canManageUsers && (
+        {isAdmin && canManageUsers && (
           <TabsContent value="users">
             <UserManagement />
           </TabsContent>
         )}
 
-        <TabsContent value="orders">
-          <OrderManagement />
-        </TabsContent>
+        {isAdmin && (
+          <TabsContent value="orders">
+            <OrderManagement />
+          </TabsContent>
+        )}
+
+        {canManageCategories && (
+          <TabsContent value="categories">
+            <CategoryManagement />
+          </TabsContent>
+        )}
 
         {canManageItems && (
           <TabsContent value="products">
@@ -160,7 +198,7 @@ export default function AdminDashboard() {
           </TabsContent>
         )}
 
-        {canAccessAnalytics && (
+        {isAdmin && canAccessAnalytics && (
           <TabsContent value="analytics">
             <AnalyticsDashboard />
           </TabsContent>

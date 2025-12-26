@@ -1,6 +1,7 @@
 import { useUser } from '@auth0/nextjs-auth0/client'
 import { useEffect, useState } from 'react'
 import { User, UserRole } from '../lib/types'
+import { getDemoRole } from '../lib/demo-auth'
 
 export function useRBAC() {
   const { user: auth0User, isLoading: authLoading, error } = useUser()
@@ -16,6 +17,20 @@ export function useRBAC() {
       }
 
       try {
+        // Determine user role - fallback logic for demo purposes
+        let userRole: UserRole = UserRole.customer;
+        
+        // First try to get role from Auth0 metadata
+        const metadataRole = auth0User['https://yourstore.com/role'] as UserRole;
+        if (metadataRole && Object.values(UserRole).includes(metadataRole)) {
+          userRole = metadataRole;
+        } else {
+          // Demo fallback: assign role based on email (for testing)
+          const demoRole = getDemoRole(auth0User.email);
+          if (demoRole === 'admin') userRole = UserRole.admin;
+          else if (demoRole === 'moderator') userRole = UserRole.moderator;
+        }
+
         // Create a mock user object based on Auth0 user data
         // In a real implementation, you would sync this with backend
         const user: User = {
@@ -24,7 +39,7 @@ export function useRBAC() {
           email: auth0User.email || '',
           email_verified: auth0User.email_verified || false,
           name: auth0User.name || '',
-          role: (auth0User['https://yourstore.com/role'] as UserRole) || UserRole.customer,
+          role: userRole,
           permissions: auth0User['https://yourstore.com/permissions'] as string[] || [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

@@ -7,11 +7,13 @@ import { ShoppingCart, LogOut, LogIn } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { Badge } from "@/components/ui/badge";
 import { useUser } from '@auth0/nextjs-auth0/client';
+import { useRBAC } from '@/hooks/use-rbac';
 
 export function SiteHeader() {
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
   const { user, isLoading } = useUser();
+  const { canAccessAdmin, isAdmin, isModerator } = useRBAC();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -58,6 +60,16 @@ export function SiteHeader() {
               )}
             </Button>
           </Link>
+          
+          {/* Admin/Moderator link - only show for privileged users */}
+          {canAccessAdmin && (
+            <Link
+              href="/admin"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              {isAdmin ? 'Admin' : 'Moderator'}
+            </Link>
+          )}
           
           {/* Profile link - only show when authenticated */}
           {user && (
