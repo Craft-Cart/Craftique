@@ -287,7 +287,6 @@ jobs:
           npm run build
           npx prisma db push --accept-data-loss
           NODE_ENV=production node dist/server.js &
-          sleep 5
         env:
           DATABASE_URL: postgresql://craftique:test_password@localhost:5432/craftique?schema=public
           PORT: 8000
@@ -298,6 +297,12 @@ jobs:
           AUTH0_CLIENT_SECRET: test
           AUTH0_AUDIENCE: https://api.test.com
           FRONTEND_URL: http://localhost:3000
+
+      - name: Wait for Backend to be ready
+        run: |
+          echo "Waiting for server to start..."
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done' || exit 1
+          echo "Server is ready!"
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
