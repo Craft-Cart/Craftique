@@ -3,7 +3,10 @@
 import { useCart } from "@/context/cart-context";
 import { CartItemCard } from "@/components/cart-item-card";
 import { CartSummary } from "@/components/cart-summary";
+import { EnhancedCart } from "@/components/enhanced-cart";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
@@ -30,35 +33,50 @@ export default function CartPage() {
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
       <div className="mb-8">
-        <h1 className="mb-2 text-4xl font-bold tracking-tight">
-          Shopping Cart
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold tracking-tight">
+            Shopping Cart
+          </h1>
+          <Badge variant="secondary">
+            {items.length} {items.length === 1 ? 'item' : 'items'}
+          </Badge>
+        </div>
         <p className="text-lg text-muted-foreground">
           Review your items before checkout
         </p>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
-        {/* Cart Items */}
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {items.length} item(s) in cart
-          </p>
-          {items.map((item) => (
-            <CartItemCard
-              key={item.product.id}
-              item={item}
-              onUpdateQuantity={updateQuantity}
-              onRemove={removeItem}
-            />
-          ))}
-        </div>
+      <Tabs defaultValue="current" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="current">Current Cart</TabsTrigger>
+          <TabsTrigger value="enhanced">Enhanced Features</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="current">
+          <div className="grid gap-8 lg:grid-cols-[1fr_380px]">
+            {/* Cart Items */}
+            <div className="space-y-4">
+              {items.map((item) => (
+                <CartItemCard
+                  key={item.product.id}
+                  item={item}
+                  onUpdateQuantity={updateQuantity}
+                  onRemove={removeItem}
+                />
+              ))}
+            </div>
 
-        {/* Cart Summary */}
-        <aside>
-          <CartSummary items={items} />
-        </aside>
-      </div>
+            {/* Cart Summary */}
+            <aside>
+              <CartSummary items={items} />
+            </aside>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="enhanced">
+          <EnhancedCart />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }

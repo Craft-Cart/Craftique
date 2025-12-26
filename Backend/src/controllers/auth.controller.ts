@@ -101,5 +101,40 @@ export class AuthController {
       next(error);
     }
   };
+
+  // Social login endpoints
+  socialLogin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { provider, redirect_uri } = req.body;
+      const result = await this.authService.getSocialAuthUrl(provider, redirect_uri);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  socialCallback = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { provider, code, state } = req.query;
+      const result = await this.authService.handleSocialCallback(
+        provider as string,
+        code as string,
+        state as string
+      );
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token, new_password } = req.body;
+      const result = await this.authService.resetPassword(token, new_password);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 

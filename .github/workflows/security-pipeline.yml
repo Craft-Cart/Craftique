@@ -6,9 +6,10 @@ name: Security Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
+
 
 # Cancel in-progress runs when a new commit is pushed (saves minutes)
 concurrency:

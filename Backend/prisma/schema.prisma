@@ -55,8 +55,12 @@ model User {
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
 
-  orders        Order[]
-  reviews       Review[]
+  orders            Order[]
+  reviews           Review[]
+  inventory_logs    InventoryLog[]
+  wishlists         Wishlist[]
+  saved_carts       SavedCart[]
+  notifications     Notification[]
 
   @@index([auth0_id])
   @@index([email])
@@ -104,9 +108,12 @@ model Item {
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
 
-  category        Category  @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  category        Category         @relation(fields: [category_id], references: [id], onDelete: Restrict)
   reviews         Review[]
   order_items     OrderItem[]
+  variants        ProductVariant[]
+  inventory_logs  InventoryLog[]
+  wishlists       Wishlist[]
 
   @@index([category_id])
   @@index([slug])
@@ -172,17 +179,20 @@ model OrderItem {
   id          String   @id @default(uuid())
   order_id   String
   item_id    String
+  variant_id String?
   name       String
   quantity   Int
   price      Decimal  @db.Decimal(10, 2)
   total      Decimal  @db.Decimal(10, 2)
   created_at DateTime @default(now())
 
-  order      Order    @relation(fields: [order_id], references: [id], onDelete: Cascade)
-  item       Item     @relation(fields: [item_id], references: [id], onDelete: Restrict)
+  order      Order          @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  item       Item           @relation(fields: [item_id], references: [id], onDelete: Restrict)
+  variant    ProductVariant? @relation(fields: [variant_id], references: [id])
 
   @@index([order_id])
   @@index([item_id])
+  @@index([variant_id])
 }
 
 model PaymobTransaction {
@@ -228,6 +238,85 @@ model PaymobTransaction {
 
   @@index([order_id])
   @@index([success])
+}
+
+model ProductVariant {
+  id          String   @id @default(uuid())
+  item_id     String
+  name        String
+  sku         String?  @unique
+  price       Decimal  @db.Decimal(10, 2)
+  quantity    Int      @default(0)
+  attributes  Json     // size, color, etc.
+  image_url   String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  item        Item     @relation(fields: [item_id], references: [id], onDelete: Cascade)
+  order_items OrderItem[]
+
+  @@index([item_id])
+  @@index([sku])
+}
+
+model InventoryLog {
+  id          String   @id @default(uuid())
+  item_id     String
+  quantity    Int
+  operation   String   // 'in', 'out', 'adjustment'
+  reason      String?
+  user_id     String
+  created_at  DateTime @default(now())
+
+  item        Item     @relation(fields: [item_id], references: [id])
+  user        User     @relation(fields: [user_id], references: [id])
+
+  @@index([item_id])
+  @@index([user_id])
+  @@index([operation])
+}
+
+model Wishlist {
+  id          String   @id @default(uuid())
+  user_id     String
+  item_id     String
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  item        Item     @relation(fields: [item_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, item_id])
+  @@index([user_id])
+  @@index([item_id])
+}
+
+model SavedCart {
+  id          String   @id @default(uuid())
+  user_id     String
+  items       Json     // Cart items snapshot
+  name        String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  user_id     String
+  title       String
+  message     String
+  type        String   // 'order', 'promotion', 'system'
+  is_read     Boolean  @default(false)
+  created_at  DateTime @default(now())
+
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([is_read])
+  @@index([type])
 }
 
 model WebhookEvent {
