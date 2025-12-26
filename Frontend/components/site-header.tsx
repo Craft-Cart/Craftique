@@ -3,13 +3,15 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, LogOut, LogIn } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { Badge } from "@/components/ui/badge";
+import { useUser } from '@auth0/nextjs-auth0/client';
 
 export function SiteHeader() {
   const { getItemCount } = useCart();
   const itemCount = getItemCount();
+  const { user, isLoading } = useUser();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -56,6 +58,48 @@ export function SiteHeader() {
               )}
             </Button>
           </Link>
+          
+          {/* Profile link - only show when authenticated */}
+          {user && (
+            <Link
+              href="/profile"
+              className="text-sm font-medium transition-colors hover:text-primary"
+            >
+              Profile
+            </Link>
+          )}
+          
+          {/* Auth buttons */}
+          {isLoading ? (
+            <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+          ) : user ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Welcome, {user.name}</span>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="gap-2 bg-transparent"
+              >
+                <Link href="/api/auth/logout">
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="gap-2 bg-transparent"
+            >
+              <Link href="/auth/login">
+                <LogIn className="h-4 w-4" />
+                Login
+              </Link>
+            </Button>
+          )}
         </nav>
       </div>
     </header>

@@ -1,6 +1,37 @@
 /**
- * Core type definitions for the e-commerce application
+ * Core type definitions for e-commerce application
  */
+
+// Auth0 User type extensions
+export interface Auth0User {
+  sub: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  middle_name?: string;
+  nickname?: string;
+  preferred_username?: string;
+  profile?: string;
+  picture?: string;
+  website?: string;
+  email?: string;
+  email_verified?: boolean;
+  gender?: string;
+  birthdate?: string;
+  zoneinfo?: string;
+  locale?: string;
+  phone_number?: string;
+  phone_number_verified?: boolean;
+  address?: string;
+  updated_at?: string;
+  sid?: string;
+  aud?: string;
+  iss?: string;
+  exp?: number;
+  iat?: number;
+  nonce?: string;
+  auth_time?: number;
+}
 
 export interface Product {
   id: string

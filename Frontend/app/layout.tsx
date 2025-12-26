@@ -5,9 +5,10 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { CartProvider } from "@/context/cart-context";
 import { SiteHeader } from "@/components/site-header";
+import { AuthProvider } from "@/components/auth-provider";
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
   title: "Storefront - Premium Products",
@@ -40,13 +41,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`font-sans antialiased`}>
-        <CartProvider>
-          <div className="min-h-screen bg-background">
-            <SiteHeader />
-            {children}
-          </div>
-        </CartProvider>
+      <body className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}>
+        <AuthProvider>
+          <CartProvider>
+            <div className="min-h-screen bg-background">
+              <SiteHeader />
+              {children}
+            </div>
+          </CartProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>
