@@ -286,11 +286,10 @@ jobs:
           npx prisma generate
           npm run build
           npx prisma db push --accept-data-loss
-          node dist/server.js &
+          NODE_ENV=production node dist/server.js &
           sleep 5
         env:
           DATABASE_URL: postgresql://craftique:test_password@localhost:5432/craftique?schema=public
-          NODE_ENV: production
           PORT: 8000
           JWT_SECRET: test-secret
           COOKIE_SECRET: test-cookie
