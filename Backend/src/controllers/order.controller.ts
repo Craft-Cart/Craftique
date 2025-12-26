@@ -175,23 +175,39 @@ export class OrderController {
         // Verification logic here
       }
 
-      // Return HTML page or redirect
+      // Sanitize user input to prevent XSS
+      const escapeHtml = (str: unknown): string => {
+        const s = String(str || '');
+        return s
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
+      // Validate merchant_order_id format (alphanumeric and hyphens only)
+      const sanitizedOrderId = String(merchant_order_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      const sanitizedTxnId = escapeHtml(id);
+      const isSuccess = success === 'true';
+
+      // Build safe redirect URL
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const redirectUrl = `${frontendUrl}/orders/${encodeURIComponent(sanitizedOrderId)}`;
+
+      // Return HTML page with meta refresh (safer than inline script)
       res.send(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Payment Status</title>
+          <meta http-equiv="refresh" content="3;url=${escapeHtml(redirectUrl)}">
         </head>
         <body>
-          <h1>Payment ${success === 'true' ? 'Successful' : 'Failed'}</h1>
-          <p>Order: ${merchant_order_id}</p>
-          <p>Transaction ID: ${id}</p>
-          <script>
-            // Redirect to frontend
-            setTimeout(() => {
-              window.location.href = '${process.env.FRONTEND_URL || 'http://localhost:3000'}/orders/${merchant_order_id}';
-            }, 3000);
-          </script>
+          <h1>Payment ${isSuccess ? 'Successful' : 'Failed'}</h1>
+          <p>Order: ${escapeHtml(sanitizedOrderId)}</p>
+          <p>Transaction ID: ${sanitizedTxnId}</p>
+          <p>Redirecting in 3 seconds... <a href="${escapeHtml(redirectUrl)}">Click here</a> if not redirected.</p>
         </body>
         </html>
       `);

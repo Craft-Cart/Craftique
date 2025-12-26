@@ -44,9 +44,13 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks (Secrets Scan)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect \
+            --source="/repo" \
+            --verbose \
+            --redact \
+            --exit-code 1
+        continue-on-error: false
 
       - name: Scan Dockerfiles with Hadolint
         run: |
