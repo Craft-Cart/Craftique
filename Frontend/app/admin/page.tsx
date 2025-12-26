@@ -9,6 +9,7 @@ import { UserManagement } from './user-management'
 import { OrderManagement } from './order-management'
 import { ProductManagement } from './product-management'
 import { AnalyticsDashboard } from './analytics'
+import { useRBAC } from '@/hooks/use-rbac'
 import { API_ENDPOINTS } from '@/lib/endpoints'
 import { User, Order, Product } from '@/lib/types'
 
@@ -20,6 +21,14 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { 
+    loading: rbacLoading, 
+    canAccessAdmin, 
+    canManageUsers, 
+    canManageItems,
+    canAccessAnalytics 
+  } = useRBAC()
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -69,8 +78,15 @@ export default function AdminDashboard() {
     return localStorage.getItem('auth0_access_token') || ''
   }
 
-  if (loading) {
+  if (rbacLoading || loading) {
     return <div className="p-6">Loading dashboard...</div>
+  }
+
+  if (!canAccessAdmin) {
+    return <div className="p-6">
+      <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
+      <p>You don't have permission to access the admin dashboard.</p>
+    </div>
   }
 
   return (
@@ -122,27 +138,33 @@ export default function AdminDashboard() {
       {/* Management Tabs */}
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
+          {canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
           <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          {canManageItems && <TabsTrigger value="products">Products</TabsTrigger>}
+          {canAccessAnalytics && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
         </TabsList>
 
-        <TabsContent value="users">
-          <UserManagement />
-        </TabsContent>
+        {canManageUsers && (
+          <TabsContent value="users">
+            <UserManagement />
+          </TabsContent>
+        )}
 
         <TabsContent value="orders">
           <OrderManagement />
         </TabsContent>
 
-        <TabsContent value="products">
-          <ProductManagement />
-        </TabsContent>
+        {canManageItems && (
+          <TabsContent value="products">
+            <ProductManagement />
+          </TabsContent>
+        )}
 
-        <TabsContent value="analytics">
-          <AnalyticsDashboard />
-        </TabsContent>
+        {canAccessAnalytics && (
+          <TabsContent value="analytics">
+            <AnalyticsDashboard />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

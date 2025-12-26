@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { ReviewController } from '../controllers/review.controller';
-import { verifyJWT, requireRole } from '../middleware/auth';
+import { verifyJWT, requireRole, requireReviewOwnershipOrModerator } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validation';
 import {
   createReviewSchema,
@@ -31,6 +31,7 @@ router.post(
 router.put(
   '/reviews/:review_id',
   verifyJWT,
+  requireReviewOwnershipOrModerator(),
   validateParams(reviewParamsSchema),
   validateBody(updateReviewSchema),
   reviewController.updateReview
@@ -38,6 +39,7 @@ router.put(
 router.delete(
   '/reviews/:review_id',
   verifyJWT,
+  requireReviewOwnershipOrModerator(),
   validateParams(reviewParamsSchema),
   reviewController.deleteReview
 );

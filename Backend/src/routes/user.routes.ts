@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { UserController } from '../controllers/user.controller';
-import { verifyJWT, requireRole } from '../middleware/auth';
+import { verifyJWT, requireRole, requireOwnership } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validation';
 import {
   createUserSchema,
@@ -18,7 +18,7 @@ router.use(verifyJWT);
 
 // Current user routes
 router.get('/me', userController.getCurrentUser);
-router.put('/me', validateBody(updateUserSchema), userController.updateUser);
+router.put('/me', requireOwnership(), validateBody(updateUserSchema), userController.updateUser);
 
 // Admin/Moderator routes
 router.get(
