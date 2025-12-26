@@ -1,0 +1,423 @@
+# Craftique DevSecOps Security Pipeline (Cost-Optimized)
+# Implements Defense in Depth security strategy with Shift-Left approach
+# Optimized for GitHub Free Tier (2,000 minutes/month for private repos)
+
+name: Security Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit is pushed (saves minutes)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  packages: write
+  pull-requests: write
+
+jobs:
+  # ============================================
+  # Stage 1: Quick Security Checks (Secrets + Linting)
+  # Combined job to reduce runner startup overhead
+  # ============================================
+  security-quick-scan:
+    name: 🔐 Quick Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks (Secrets Scan)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Scan Dockerfiles with Hadolint
+        run: |
+          docker run --rm -i hadolint/hadolint < Backend/Dockerfile || true
+          docker run --rm -i hadolint/hadolint < Frontend/Dockerfile || true
+
+  # ============================================
+  # Stage 2: SAST + SCA Combined (Single Job)
+  # Runs Semgrep SAST and Trivy SCA together
+  # ============================================
+  code-analysis:
+    name: 🔍 Code & Dependency Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/security-audit p/owasp-top-ten p/nodejs p/typescript
+          generateSarif: true
+
+      - name: Upload Semgrep SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: sast
+
+      - name: Run Trivy FS Scan (SCA + IaC)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: 'sca-iac'
+
+  # ============================================
+  # Stage 3: Build & Test (Combined Backend + Frontend)
+  # Single job with parallel steps where possible
+  # ============================================
+  build-and-test:
+    name: 🔨 Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [security-quick-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Install pnpm for Frontend
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('Frontend/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      # Backend Build & Test
+      - name: Install Backend dependencies
+        working-directory: Backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: Backend
+        run: npx prisma generate
+
+      - name: Build Backend
+        working-directory: Backend
+        run: npm run build
+
+      - name: Test Backend
+        working-directory: Backend
+        run: npm test -- --passWithNoTests
+        env:
+          NODE_ENV: test
+
+      # Frontend Build & Test
+      - name: Install Frontend dependencies
+        working-directory: Frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Frontend
+        working-directory: Frontend
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+
+      - name: Test Frontend
+        working-directory: Frontend
+        run: pnpm test -- --passWithNoTests
+        env:
+          NODE_ENV: test
+
+  # ============================================
+  # Stage 4: Container Build & Scan (Main branch only)
+  # Skip on PRs to save significant time/cost
+  # ============================================
+  container-security:
+    name: 🐳 Container Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [build-and-test, code-analysis]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: Backend
+          push: false
+          load: true
+          tags: backend:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: Frontend
+          push: false
+          load: true
+          tags: frontend:scan
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+
+      - name: Scan Backend container
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'backend:scan'
+          format: 'sarif'
+          output: 'backend-container.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Scan Frontend container
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'frontend:scan'
+          format: 'sarif'
+          output: 'frontend-container.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Backend container scan
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'backend-container.sarif'
+          category: 'container-backend'
+
+      - name: Upload Frontend container scan
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'frontend-container.sarif'
+          category: 'container-frontend'
+
+      # Generate SBOM in same job to avoid extra runner
+      - name: Generate Backend SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: backend:scan
+          format: cyclonedx-json
+          output-file: backend-sbom.json
+
+      - name: Generate Frontend SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: frontend:scan
+          format: cyclonedx-json
+          output-file: frontend-sbom.json
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-artifacts
+          path: '*-sbom.json'
+          retention-days: 30
+
+  # ============================================
+  # Stage 5: DAST (Main branch only, after deploy)
+  # Most expensive - only run on releases
+  # ============================================
+  dast-scan:
+    name: 🌐 DAST Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [container-security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: craftique
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: craftique
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Backend/package-lock.json
+
+      - name: Setup and start Backend
+        working-directory: Backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm run build
+          npx prisma db push --accept-data-loss
+          node dist/server.js &
+          sleep 5
+        env:
+          DATABASE_URL: postgresql://craftique:test_password@localhost:5432/craftique?schema=public
+          NODE_ENV: production
+          PORT: 8000
+          JWT_SECRET: test-secret
+          COOKIE_SECRET: test-cookie
+          AUTH0_DOMAIN: test.auth0.com
+          AUTH0_CLIENT_ID: test
+          AUTH0_CLIENT_SECRET: test
+          AUTH0_AUDIENCE: https://api.test.com
+          FRONTEND_URL: http://localhost:3000
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'http://localhost:8000/health'
+          allow_issue_writing: false
+        continue-on-error: true
+
+      - name: Upload ZAP Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 14
+
+  # ============================================
+  # Stage 6: Security Gate & PR Comment
+  # ============================================
+  security-gate:
+    name: 🚦 Security Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [security-quick-scan, code-analysis, build-and-test]
+    if: always()
+    steps:
+      - name: Evaluate security results
+        run: |
+          echo "🔐 Security Pipeline Summary"
+          echo "============================"
+          echo "Quick Scan: ${{ needs.security-quick-scan.result }}"
+          echo "Code Analysis: ${{ needs.code-analysis.result }}"
+          echo "Build & Test: ${{ needs.build-and-test.result }}"
+          
+          if [ "${{ needs.security-quick-scan.result }}" == "failure" ]; then
+            echo "❌ CRITICAL: Secrets detected!"
+            exit 1
+          fi
+          
+          if [ "${{ needs.build-and-test.result }}" == "failure" ]; then
+            echo "❌ Build or tests failed!"
+            exit 1
+          fi
+          
+          echo "✅ Security gate passed"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🛡️ Security Summary
+              | Check | Status |
+              |-------|--------|
+              | Secrets Scan | ${{ needs.security-quick-scan.result == 'success' && '✅' || '❌' }} |
+              | SAST/SCA | ${{ needs.code-analysis.result == 'success' && '✅' || '⚠️' }} |
+              | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |`
+            });
+
+  # ============================================
+  # Stage 7: Deploy (Main branch only)
+  # ============================================
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [security-gate, container-security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.security-gate.result == 'success'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: Backend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.BACKEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: Frontend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+
+      - name: Summary
+        run: |
+          echo "🚀 Deployed!"
+          echo "Backend: ${{ env.DOCKER_REGISTRY }}/${{ env.BACKEND_IMAGE }}:${{ github.sha }}"
+          echo "Frontend: ${{ env.DOCKER_REGISTRY }}/${{ env.FRONTEND_IMAGE }}:${{ github.sha }}"
