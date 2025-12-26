@@ -81,7 +81,7 @@ export function SiteHeader() {
                 size="sm"
                 className="gap-2 bg-transparent"
               >
-                <Link href="/api/auth/logout">
+                <Link href="/auth/logout">
                   <LogOut className="h-4 w-4" />
                   Logout
                 </Link>
