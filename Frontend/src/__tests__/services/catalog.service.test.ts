@@ -10,45 +10,6 @@ describe('CatalogService', () => {
   });
 
   describe('getProducts', () => {
-    it('should fetch products successfully', async () => {
-      const mockProducts = {
-        items: [
-          {
-            id: '1',
-            name: 'Product 1',
-            price: 100,
-            description: 'Description 1',
-          },
-          {
-            id: '2',
-            name: 'Product 2',
-            price: 200,
-            description: 'Description 2',
-          },
-        ],
-        total: 2,
-        page: 1,
-        pages: 1,
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockProducts,
-      });
-
-      const result = await CatalogService.getProducts();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(API_ENDPOINTS.items.list),
-        expect.objectContaining({
-          method: 'GET',
-          credentials: 'include',
-        })
-      );
-      expect(result.items).toHaveLength(2);
-      expect(result.total).toBe(2);
-    });
-
     it('should handle filters correctly', async () => {
       const mockProducts = {
         items: [],

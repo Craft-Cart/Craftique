@@ -13,11 +13,11 @@ export function ProductSearch() {
     searchParams.get("search") || ""
   );
 
-  // Best Practice Fix
+  // Debounced search with Next.js router
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Create a NEW URLSearchParams instance based on window to avoid dependency on the prop
-      const params = new URLSearchParams(window.location.search);
+      // Use searchParams from Next.js hook (safe, no eval-like behavior)
+      const params = new URLSearchParams(searchParams.toString());
 
       const currentSearch = params.get("search") || "";
       if (currentSearch === searchValue) return; // unnecessary update check
@@ -34,7 +34,7 @@ export function ProductSearch() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchValue, router]); 
+  }, [searchValue, router, searchParams]); 
 
   const clearSearch = () => {
     setSearchValue("");

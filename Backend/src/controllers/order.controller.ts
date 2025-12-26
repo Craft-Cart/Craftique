@@ -175,26 +175,19 @@ export class OrderController {
         // Verification logic here
       }
 
-      // Return HTML page or redirect
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Payment Status</title>
-        </head>
-        <body>
-          <h1>Payment ${success === 'true' ? 'Successful' : 'Failed'}</h1>
-          <p>Order: ${merchant_order_id}</p>
-          <p>Transaction ID: ${id}</p>
-          <script>
-            // Redirect to frontend
-            setTimeout(() => {
-              window.location.href = '${process.env.FRONTEND_URL || 'http://localhost:3000'}/orders/${merchant_order_id}';
-            }, 3000);
-          </script>
-        </body>
-        </html>
-      `);
+      // Validate and sanitize merchant_order_id (alphanumeric and hyphens only)
+      const sanitizedOrderId = String(merchant_order_id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      const sanitizedTxnId = String(id || '').replace(/[^a-zA-Z0-9-]/g, '');
+      const isSuccess = success === 'true';
+
+      // Build safe redirect URL with query params for frontend to display
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const redirectUrl = new URL(`/orders/${encodeURIComponent(sanitizedOrderId)}`, frontendUrl);
+      redirectUrl.searchParams.set('payment_status', isSuccess ? 'success' : 'failed');
+      redirectUrl.searchParams.set('txn_id', sanitizedTxnId);
+
+      // Direct redirect - no user data in HTML response (prevents XSS)
+      res.redirect(redirectUrl.toString());
     } catch (error) {
       next(error);
     }
