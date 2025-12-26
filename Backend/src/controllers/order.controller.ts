@@ -175,42 +175,19 @@ export class OrderController {
         // Verification logic here
       }
 
-      // Sanitize user input to prevent XSS
-      const escapeHtml = (str: unknown): string => {
-        const s = String(str || '');
-        return s
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
-      };
-
-      // Validate merchant_order_id format (alphanumeric and hyphens only)
+      // Validate and sanitize merchant_order_id (alphanumeric and hyphens only)
       const sanitizedOrderId = String(merchant_order_id || '').replace(/[^a-zA-Z0-9-]/g, '');
-      const sanitizedTxnId = escapeHtml(id);
+      const sanitizedTxnId = String(id || '').replace(/[^a-zA-Z0-9-]/g, '');
       const isSuccess = success === 'true';
 
-      // Build safe redirect URL
+      // Build safe redirect URL with query params for frontend to display
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const redirectUrl = `${frontendUrl}/orders/${encodeURIComponent(sanitizedOrderId)}`;
+      const redirectUrl = new URL(`/orders/${encodeURIComponent(sanitizedOrderId)}`, frontendUrl);
+      redirectUrl.searchParams.set('payment_status', isSuccess ? 'success' : 'failed');
+      redirectUrl.searchParams.set('txn_id', sanitizedTxnId);
 
-      // Return HTML page with meta refresh (safer than inline script)
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Payment Status</title>
-          <meta http-equiv="refresh" content="3;url=${escapeHtml(redirectUrl)}">
-        </head>
-        <body>
-          <h1>Payment ${isSuccess ? 'Successful' : 'Failed'}</h1>
-          <p>Order: ${escapeHtml(sanitizedOrderId)}</p>
-          <p>Transaction ID: ${sanitizedTxnId}</p>
-          <p>Redirecting in 3 seconds... <a href="${escapeHtml(redirectUrl)}">Click here</a> if not redirected.</p>
-        </body>
-        </html>
-      `);
+      // Direct redirect - no user data in HTML response (prevents XSS)
+      res.redirect(redirectUrl.toString());
     } catch (error) {
       next(error);
     }

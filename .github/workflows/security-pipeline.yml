@@ -115,13 +115,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: Backend/package-lock.json
 
       - name: Install pnpm for Frontend
         uses: pnpm/action-setup@v2
         with:
           version: 8
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('Backend/package-lock.json', 'Backend/package.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
       - name: Cache pnpm store
         uses: actions/cache@v4
