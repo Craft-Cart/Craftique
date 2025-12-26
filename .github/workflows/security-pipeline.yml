@@ -6,9 +6,9 @@ name: Security Pipeline
 
 on:
   push:
-    branches: [master, licence-scanning-and-image-on-gcp]
-  # pull_request:
-  #   branches: [master]
+    branches: [master]
+  pull_request:
+    branches: [master]
 
 
 # Cancel in-progress runs when a new commit is pushed (saves minutes)
