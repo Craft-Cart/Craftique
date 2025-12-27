@@ -26,6 +26,18 @@ export class UserRepository {
     });
   }
 
+  async upsertByAuth0Id(
+    auth0Id: string,
+    createData: Prisma.UserCreateInput,
+    updateData?: Prisma.UserUpdateInput
+  ): Promise<User> {
+    return prisma.user.upsert({
+      where: { auth0_id: auth0Id },
+      create: createData,
+      update: updateData || { last_login: new Date() },
+    });
+  }
+
   async update(id: string, data: Prisma.UserUpdateInput): Promise<User> {
     return prisma.user.update({
       where: { id },

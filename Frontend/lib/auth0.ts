@@ -8,5 +8,10 @@ export const auth0 = new Auth0Client({
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
   authorizationParameters: {
     scope: 'openid profile email',
+    // Ensure same audience as backend for token compatibility
+    // Note: If audience is empty, Auth0 will use default audience
+    ...(process.env.AUTH0_AUDIENCE || process.env.NEXT_PUBLIC_AUTH0_AUDIENCE
+      ? { audience: process.env.AUTH0_AUDIENCE || process.env.NEXT_PUBLIC_AUTH0_AUDIENCE }
+      : {}),
   },
 });

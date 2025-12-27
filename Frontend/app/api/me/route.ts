@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth0 } from '@/lib/auth0';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await auth0.getSession();
+    const session = await auth0.getSession(request);
     
     if (!session) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

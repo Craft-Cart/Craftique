@@ -13,24 +13,22 @@ export class AuthService {
   /**
    * Sync Auth0 user with backend database
    * Call this after successful Auth0 login
+   * Uses Next.js API route for server-side token access
    */
-  async syncUser(auth0User: Auth0User): Promise<User> {
+  async syncUser(auth0User?: Auth0User): Promise<User> {
     try {
-      // Get the Auth0 access token
-      const token = await this.getAuthToken()
-      
-      // Verify token with backend and sync user
-      const response = await fetch(`${this.apiBaseUrl}/auth/verify`, {
-        method: 'GET',
+      // Use Next.js API route to sync (handles token access server-side)
+      const response = await fetch('/api/auth/sync', {
+        method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to sync user: ${response.statusText}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`Failed to sync user: ${errorData.error || response.statusText}`)
       }
 
       const data = await response.json()
@@ -80,26 +78,33 @@ export class AuthService {
 
   /**
    * Get Auth0 access token from client-side
+   * Uses Next.js API route to access token from HttpOnly cookies
    */
   private async getAuthToken(): Promise<string> {
-    // This should be implemented based on your Auth0 client setup
-    // For now, we'll try to get it from localStorage or a cookie
-    if (typeof window !== 'undefined') {
-      // Try to get token from Auth0 SDK or storage
-      const auth0Token = localStorage.getItem('auth0_access_token')
-      if (auth0Token) {
-        return auth0Token
-      }
-      
-      // Fallback: get from cookie (server-side)
-      const cookies = document.cookie.split(';')
-      const authCookie = cookies.find(cookie => cookie.trim().startsWith('access_token='))
-      if (authCookie) {
-        return authCookie.split('=')[1]
-      }
+    if (typeof window === 'undefined') {
+      throw new Error('getAuthToken can only be called from client-side')
     }
-    
-    throw new Error('No authentication token available')
+
+    try {
+      // Call Next.js API route to get token (server-side can access HttpOnly cookies)
+      const response = await fetch('/api/auth/token', {
+        method: 'GET',
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Not authenticated')
+        }
+        throw new Error(`Failed to get token: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data.token
+    } catch (error: any) {
+      console.error('Error getting auth token:', error)
+      throw new Error(`No authentication token available: ${error.message}`)
+    }
   }
 
   /**
