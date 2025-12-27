@@ -1,38 +1,49 @@
 import { useUser } from '@auth0/nextjs-auth0/client'
 import { useEffect, useState } from 'react'
 import { User, UserRole } from '../lib/types'
-import { getDemoRole } from '../lib/demo-auth'
+import { authService } from '../lib/auth-service'
 
 export function useRBAC() {
   const { user: auth0User, isLoading: authLoading, error } = useUser()
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [syncAttempted, setSyncAttempted] = useState(false)
 
   useEffect(() => {
     const loadUser = async () => {
       if (!auth0User) {
         setCurrentUser(null)
         setLoading(false)
+        setSyncAttempted(false)
+        authService.clearCurrentUser()
         return
       }
 
       try {
-        // Determine user role - fallback logic for demo purposes
-        let userRole: UserRole = UserRole.customer;
-        
-        // First try to get role from Auth0 metadata
-        const metadataRole = auth0User['https://yourstore.com/role'] as UserRole;
-        if (metadataRole && Object.values(UserRole).includes(metadataRole)) {
-          userRole = metadataRole;
-        } else {
-          // Demo fallback: assign role based on email (for testing)
-          const demoRole = getDemoRole(auth0User.email);
-          if (demoRole === 'admin') userRole = UserRole.admin;
-          else if (demoRole === 'moderator') userRole = UserRole.moderator;
+        // Sync user with backend database
+        // This ensures the user exists in the backend and gets real data
+        if (!syncAttempted) {
+          setSyncAttempted(true)
+          try {
+            const syncedUser = await authService.syncUser(auth0User)
+            setCurrentUser(syncedUser)
+            setLoading(false)
+            return
+          } catch (syncError) {
+            console.error('Failed to sync user, falling back to Auth0 data:', syncError)
+            // Fallback to Auth0 data if sync fails
+          }
         }
 
-        // Create a mock user object based on Auth0 user data
-        // In a real implementation, you would sync this with backend
+        // Fallback: Use Auth0 user data if backend sync fails
+        // This ensures the UI still works even if backend is unavailable
+        const metadataRole = auth0User['https://yourstore.com/role'] as UserRole;
+        let userRole: UserRole = UserRole.customer;
+        
+        if (metadataRole && Object.values(UserRole).includes(metadataRole)) {
+          userRole = metadataRole;
+        }
+
         const user: User = {
           id: auth0User.sub || '',
           auth0_id: auth0User.sub || '',
@@ -55,7 +66,7 @@ export function useRBAC() {
     }
 
     loadUser()
-  }, [auth0User])
+  }, [auth0User, syncAttempted])
 
   const hasRole = (role: UserRole): boolean => {
     return currentUser?.role === role

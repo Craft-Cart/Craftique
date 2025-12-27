@@ -3,24 +3,47 @@ import { config } from '../config/env';
 import { UserRepository } from '../repositories/user.repository';
 import { ConflictError, AuthenticationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import { UserRole } from '@prisma/client';
 
 export class AuthService {
   private userRepository: UserRepository;
+  private managementTokenCache: { token: string; expiresAt: number } | null = null;
 
   constructor() {
     this.userRepository = new UserRepository();
   }
 
+  /**
+   * Validate and normalize role string to UserRole enum
+   */
+  private normalizeRole(role: string | undefined | null): UserRole {
+    if (!role) return UserRole.customer;
+    
+    const normalized = role.toLowerCase().trim();
+    const validRoles: UserRole[] = [UserRole.customer, UserRole.moderator, UserRole.admin];
+    
+    // Check if normalized role is a valid enum value
+    if (validRoles.includes(normalized as UserRole)) {
+      return normalized as UserRole;
+    }
+    
+    // Default to customer if invalid
+    return UserRole.customer;
+  }
+
   async login(email: string, password: string) {
     try {
       // Authenticate with Auth0
+      // NOTE: Password grant is deprecated by Auth0 but still supported for legacy applications
+      // For new implementations, consider using OAuth Authorization Code flow instead
+      // This endpoint is kept for API clients and backward compatibility
       const response = await axios.post(
         `https://${config.auth0.domain}/oauth/token`,
         {
           client_id: config.auth0.clientId,
           client_secret: config.auth0.clientSecret,
           audience: config.auth0.audience,
-          grant_type: 'password',
+          grant_type: 'password', // ⚠️ Deprecated - consider migrating to OAuth flow
           username: email,
           password: password,
           scope: 'openid profile email',
@@ -32,7 +55,7 @@ export class AuthService {
         }
       );
 
-      const { access_token, refresh_token, expires_in } = response.data;
+      const { access_token, refresh_token, expires_in, id_token } = response.data;
 
       // Get user info from Auth0
       const userInfo = await axios.get(
@@ -44,23 +67,126 @@ export class AuthService {
         }
       );
 
-      // Find or create user in database
-      let user = await this.userRepository.findByAuth0Id(userInfo.data.sub);
+      const auth0Id = userInfo.data.sub;
+
+      // Get role from JWT token claims first (most reliable if Auth0 is configured)
+      // Then fallback to Management API
+      let roleString: string | undefined = undefined;
+      let permissions: string[] = [];
       
-      if (!user) {
-        // Create user if doesn't exist
-        user = await this.userRepository.create({
-          auth0_id: userInfo.data.sub,
+      // First, try to decode access_token or id_token to get roles from JWT claims
+      const jwt = require('jsonwebtoken');
+      
+      // Try access_token first (might have custom claims)
+      try {
+        const decodedAccessToken = jwt.decode(access_token);
+        if (decodedAccessToken) {
+          roleString = decodedAccessToken['https://yourstore.com/role'] || 
+                      decodedAccessToken['https://auth0.com/roles']?.[0] ||
+                      decodedAccessToken.role;
+          permissions = decodedAccessToken['https://yourstore.com/permissions'] || 
+                       decodedAccessToken['https://auth0.com/permissions'] ||
+                       decodedAccessToken.permissions || 
+                       [];
+        }
+      } catch (e) {
+        // Continue to try id_token
+      }
+      
+      // Try id_token if access_token didn't have role
+      if (!roleString && id_token) {
+        try {
+          const decodedIdToken = jwt.decode(id_token);
+          if (decodedIdToken) {
+            roleString = decodedIdToken['https://yourstore.com/role'] || 
+                        decodedIdToken['https://auth0.com/roles']?.[0] ||
+                        decodedIdToken.role;
+            permissions = decodedIdToken['https://yourstore.com/permissions'] || 
+                         decodedIdToken['https://auth0.com/permissions'] ||
+                         decodedIdToken.permissions || 
+                         permissions;
+          }
+        } catch (e) {
+          // Continue to Management API
+        }
+      }
+      
+      // If role not found in token, try Management API
+      if (!roleString) {
+        try {
+          const managementToken = await this.getAuth0ManagementToken();
+          const userDetails = await axios.get(
+            `https://${config.auth0.domain}/api/v2/users/${encodeURIComponent(auth0Id)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${managementToken}`,
+              },
+            }
+          );
+
+          // Check app_metadata first (preferred for roles)
+          const appMetadata = userDetails.data.app_metadata || {};
+          const userMetadata = userDetails.data.user_metadata || {};
+          
+          roleString = appMetadata.role || 
+                      userMetadata.role || 
+                      appMetadata['https://yourstore.com/role'] ||
+                      userMetadata['https://yourstore.com/role'];
+          
+          if (!permissions.length) {
+            permissions = appMetadata.permissions || 
+                         userMetadata.permissions ||
+                         appMetadata['https://yourstore.com/permissions'] ||
+                         userMetadata['https://yourstore.com/permissions'] ||
+                         [];
+          }
+
+          // Also check if role is in Auth0 roles (if using Auth0's built-in roles)
+          if (userDetails.data.roles && userDetails.data.roles.length > 0) {
+            // Map Auth0 roles to our roles
+            const auth0Role = userDetails.data.roles[0].toLowerCase();
+            if (['admin', 'moderator', 'customer'].includes(auth0Role)) {
+              roleString = auth0Role;
+            }
+          }
+          
+          logger.info('Retrieved role from Management API', { auth0Id, role: roleString });
+        } catch (metadataError: any) {
+          logger.warn('Failed to get user metadata from Management API', {
+            error: metadataError.message,
+            status: metadataError.response?.status,
+            auth0Id,
+          });
+          // Role will remain undefined and default to 'customer'
+        }
+      } else {
+        logger.info('Retrieved role from JWT token', { auth0Id, role: roleString });
+      }
+
+      // Normalize role to UserRole enum
+      const role = this.normalizeRole(roleString);
+
+      // Find or create user in database using upsert to avoid duplicate creation
+      // This handles cases where user was created by register() or verifyToken()
+      const user = await this.userRepository.upsertByAuth0Id(
+        auth0Id,
+        {
+          auth0_id: auth0Id,
           email: userInfo.data.email,
           email_verified: userInfo.data.email_verified || false,
           name: userInfo.data.name || userInfo.data.email.split('@')[0],
-          role: userInfo.data['https://yourstore.com/role'] || 'customer',
-          permissions: userInfo.data['https://yourstore.com/permissions'] || [],
-        });
-      } else {
-        // Update last login
-        await this.userRepository.updateLastLogin(user.id);
-      }
+          role: role,
+          permissions: permissions,
+        },
+        {
+          last_login: new Date(),
+          // Update role and permissions from Auth0 token if they changed
+          role: role,
+          permissions: permissions,
+          email_verified: userInfo.data.email_verified || false,
+          name: userInfo.data.name || undefined,
+        }
+      );
 
       return {
         access_token,
@@ -70,13 +196,23 @@ export class AuthService {
         user,
       };
     } catch (error: any) {
-      logger.error('Login failed', { error: error.message, email });
+      logger.error('Login failed', { 
+        error: error.message, 
+        email,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data
+      });
       
       if (error.response?.status === 401) {
         throw new AuthenticationError('Invalid email or password');
       }
       
-      throw new AuthenticationError('Authentication failed');
+      if (error.response?.status === 403) {
+        throw new AuthenticationError('Access forbidden. Password grant might be disabled in Auth0. Check Auth0 application settings.');
+      }
+      
+      throw new AuthenticationError(`Authentication failed: ${error.response?.data?.error_description || error.message}`);
     }
   }
 
@@ -205,17 +341,135 @@ export class AuthService {
         );
       });
 
-      // Get user from database
-      const user = await this.userRepository.findByAuth0Id((decoded as any).sub);
+      const decodedToken = decoded as any;
+      const auth0Id = decodedToken.sub;
+
+      // Get user from database or create if doesn't exist (auto-sync)
+      // Use upsert to handle race conditions gracefully
+      let user = await this.userRepository.findByAuth0Id(auth0Id);
       
       if (!user) {
-        throw new AuthenticationError('User not found');
+        // Auto-create user if they don't exist (from frontend Auth0 login)
+        // Get user info from Auth0 to populate user data
+        try {
+          const userInfo = await axios.get(
+            `https://${config.auth0.domain}/userinfo`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          logger.info('User info from Auth0', { userInfo: userInfo.data });
+
+          // Get role from JWT token claims first (most reliable if Auth0 is configured)
+          // Then fallback to Management API
+          let roleString: string | undefined = undefined;
+          let permissions: string[] = [];
+          
+          // First, try to get role from decoded token (from verifyToken)
+          roleString = decodedToken['https://yourstore.com/role'] || 
+                      decodedToken['https://auth0.com/roles']?.[0] ||
+                      decodedToken.role;
+          
+          permissions = decodedToken['https://yourstore.com/permissions'] || 
+                       decodedToken['https://auth0.com/permissions'] ||
+                       decodedToken.permissions || 
+                       [];
+          
+          // If role not found in token, try Management API
+          if (!roleString) {
+            try {
+              const managementToken = await this.getAuth0ManagementToken();
+              const userDetails = await axios.get(
+                `https://${config.auth0.domain}/api/v2/users/${encodeURIComponent(auth0Id)}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${managementToken}`,
+                  },
+                }
+              );
+
+              // Check app_metadata first (preferred for roles)
+              const appMetadata = userDetails.data.app_metadata || {};
+              const userMetadata = userDetails.data.user_metadata || {};
+              
+              roleString = appMetadata.role || 
+                          userMetadata.role || 
+                          appMetadata['https://yourstore.com/role'] ||
+                          userMetadata['https://yourstore.com/role'];
+              
+              if (!permissions.length) {
+                permissions = appMetadata.permissions || 
+                           userMetadata.permissions ||
+                           appMetadata['https://yourstore.com/permissions'] ||
+                           userMetadata['https://yourstore.com/permissions'] ||
+                           [];
+              }
+
+              // Also check if role is in Auth0 roles (if using Auth0's built-in roles)
+              if (userDetails.data.roles && userDetails.data.roles.length > 0) {
+                // Map Auth0 roles to our roles
+                const auth0Role = userDetails.data.roles[0].toLowerCase();
+                if (['admin', 'moderator', 'customer'].includes(auth0Role)) {
+                  roleString = auth0Role;
+                }
+              }
+              
+              logger.info('Retrieved role from Management API', { auth0Id, role: roleString });
+            } catch (metadataError: any) {
+              logger.warn('Failed to get user metadata from Management API', {
+                error: metadataError.message,
+                status: metadataError.response?.status,
+                auth0Id,
+              });
+              // Role will remain undefined and default to 'customer'
+            }
+          } else {
+            logger.info('Retrieved role from JWT token', { auth0Id, role: roleString });
+          }
+
+          // Normalize role to UserRole enum
+          const role = this.normalizeRole(roleString);
+
+          // Use upsert to avoid race condition - creates if doesn't exist, updates if exists
+          user = await this.userRepository.upsertByAuth0Id(
+            auth0Id,
+            {
+              auth0_id: auth0Id,
+              email: userInfo.data.email,
+              email_verified: userInfo.data.email_verified || false,
+              name: userInfo.data.name || userInfo.data.email?.split('@')[0] || 'User',
+              role: role,
+              permissions: permissions,
+            },
+            {
+              last_login: new Date(),
+              // Update role and permissions from Auth0 token if they changed
+              role: role,
+              permissions: permissions,
+              email_verified: userInfo.data.email_verified || false,
+              name: userInfo.data.name || undefined,
+            }
+          );
+
+          logger.info('Synced user from Auth0 token', { auth0Id, email: userInfo.data.email });
+        } catch (syncError: any) {
+          logger.error('Failed to sync user from token', { 
+            error: syncError.message, 
+            auth0Id 
+          });
+          throw new AuthenticationError('User not found and could not be synced');
+        }
+      } else {
+        // Update last login for existing users
+        await this.userRepository.updateLastLogin(user.id);
       }
 
       return {
         valid: true,
         user,
-        token_claims: decoded,
+        token_claims: decodedToken,
       };
     } catch (error: any) {
       logger.error('Token verification failed', { error: error.message });
@@ -339,7 +593,19 @@ export class AuthService {
   }
 
   private async getAuth0ManagementToken(): Promise<string> {
-    // This should be cached in production
+    // Check if cached token is still valid (tokens typically expire in 24 hours)
+    // Use 23 hours as expiration to be safe
+    const now = Date.now();
+    const expirationBuffer = 23 * 60 * 60 * 1000; // 23 hours in milliseconds
+
+    if (
+      this.managementTokenCache &&
+      now < this.managementTokenCache.expiresAt - expirationBuffer
+    ) {
+      return this.managementTokenCache.token;
+    }
+
+    // Fetch new token
     const response = await axios.post(
       `https://${config.auth0.domain}/oauth/token`,
       {
@@ -350,7 +616,17 @@ export class AuthService {
       }
     );
 
-    return response.data.access_token;
+    const token = response.data.access_token;
+    const expiresIn = response.data.expires_in || 86400; // Default to 24 hours if not provided
+
+    // Cache the token
+    this.managementTokenCache = {
+      token,
+      expiresAt: now + expiresIn * 1000, // Convert seconds to milliseconds
+    };
+
+    logger.info('Refreshed Auth0 Management API token');
+    return token;
   }
 }
 
