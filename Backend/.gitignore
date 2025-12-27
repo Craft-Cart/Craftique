@@ -32,9 +32,6 @@ Thumbs.db
 *.db
 *.db-journal
 
-# backend migrations
-migrations/
-
 # Testing
 coverage/
 .nyc_output/
