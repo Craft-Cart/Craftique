@@ -82,10 +82,11 @@ export const verifyJWT = async (req: Request, _res: Response, next: NextFunction
     const decoded = await verifyAuth0Token(token);
 
     // Extract user info from token with proper role mapping
-    const role = decoded['https://yourstore.com/role'] || 
-                 decoded.role || 
-                 decoded['https://auth0.com/roles']?.[0] || 
-                 'customer';
+    const role = decoded['https://craftique-api/roles']?.[0] ||
+                  decoded['https://yourstore.com/role'] ||
+                  decoded.role ||
+                  decoded['https://auth0.com/roles']?.[0] ||
+                  'customer';
     
     // Normalize role names
     const normalizedRole = role.toLowerCase();
