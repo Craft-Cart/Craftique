@@ -1,14 +1,14 @@
 # Multi-stage build for Craftique Backend
 # Stage 1: Dependencies
-# Using Node.js 20 (latest LTS) which includes zlib CVE-2023-45853 fix
+# Using Node.js 20 (latest LTS) with security fixes for zlib (CVE-2023-45853) and linux-pam (CVE-2025-8941)
 FROM node:20-slim AS deps
 
 WORKDIR /app
 
-# Update system packages including zlib to fix CVE-2023-45853
+# Update system packages including zlib (CVE-2023-45853) and linux-pam (CVE-2025-8941)
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends zlib1g && \
+    apt-get install -y --no-install-recommends zlib1g libpam-runtime libpam-modules && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy package files
@@ -18,13 +18,13 @@ COPY package.json package-lock.json* ./
 RUN npm ci && npm cache clean --force
 
 # Stage 2: Build
-# Using Node.js 20 (latest LTS) which includes zlib CVE-2023-45853 fix
+# Using Node.js 20 (latest LTS) with security fixes for zlib (CVE-2023-45853) and linux-pam (CVE-2025-8941)
 FROM node:20-slim AS builder
 
-# Update system packages including zlib to fix CVE-2023-45853
+# Update system packages including zlib (CVE-2023-45853) and linux-pam (CVE-2025-8941)
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends zlib1g && \
+    apt-get install -y --no-install-recommends zlib1g libpam-runtime libpam-modules && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -47,15 +47,15 @@ COPY src ./src
 RUN npm run build
 
 # Stage 3: Production
-# Using Node.js 20 (latest LTS) which includes zlib CVE-2023-45853 fix
+# Using Node.js 20 (latest LTS) with security fixes for zlib (CVE-2023-45853) and linux-pam (CVE-2025-8941)
 FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Update system packages including zlib to fix CVE-2023-45853 and install OpenSSL for Prisma
+# Update system packages including zlib (CVE-2023-45853), linux-pam (CVE-2025-8941), and install OpenSSL for Prisma
 RUN apt-get update -y && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends openssl zlib1g && \
+    apt-get install -y --no-install-recommends openssl zlib1g libpam-runtime libpam-modules && \
     rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
