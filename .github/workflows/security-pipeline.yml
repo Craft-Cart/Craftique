@@ -21,7 +21,7 @@ env:
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'craftique-project' }}
   GCP_REGION: ${{ vars.GCP_REGION || 'us-central1' }}
   DOCKER_REGISTRY: ${{ vars.GCP_REGION || 'us-central1' }}-docker.pkg.dev
-  ARTIFACT_REPO: craftique
+  ARTIFACT_REPO: ${{vars.ARTIFACT_REPO }}
   BACKEND_IMAGE: backend
   FRONTEND_IMAGE: frontend
 
