@@ -38,7 +38,7 @@ export function CartItemCard({ item, onUpdateQuantity, onRemove }: CartItemCardP
         <div className="flex gap-4">
           <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-md bg-muted">
             <Image
-              src={item.product.image || "/placeholder.svg"}
+              src={item.product.images[0] || "/placeholder.svg"}
               alt={item.product.name}
               fill
               className="object-cover"
@@ -48,7 +48,7 @@ export function CartItemCard({ item, onUpdateQuantity, onRemove }: CartItemCardP
           <div className="flex flex-1 flex-col justify-between">
             <div>
               <h3 className="font-medium leading-tight">{item.product.name}</h3>
-              <p className="mt-1 text-sm text-muted-foreground">${item.product.price.toFixed(2)} each</p>
+              <p className="mt-1 text-sm text-muted-foreground">${Number(item.product.price)} each</p>
             </div>
 
             <div className="flex items-center justify-between">

@@ -24,15 +24,15 @@ export function ProductCard({ product }: ProductCardProps) {
       <CardContent className="p-0">
         <div className="relative aspect-square overflow-hidden bg-muted">
           <Image
-            src={product.image || "/placeholder.svg"}
+            src={product.images[0] || "/placeholder.svg"}
             alt={product.name}
             fill
             className="object-cover transition-transform group-hover:scale-105"
           />
-          {product.originalPrice && (
+          {product.price && (
             <Badge className="absolute left-3 top-3 bg-destructive text-destructive-foreground">Sale</Badge>
           )}
-          {!product.inStock && (
+          {!(product.quantity > 0) && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80">
               <Badge variant="secondary">Out of Stock</Badge>
             </div>
@@ -41,21 +41,21 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="p-4">
           <h3 className="mb-2 font-medium text-balance leading-tight">{product.name}</h3>
           <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">{product.description}</p>
-          {product.rating && (
+          {product.average_rating && (
             <div className="mb-3 flex items-center gap-1 text-sm">
               <Star className="h-4 w-4 fill-primary text-primary" />
-              <span className="font-medium">{product.rating}</span>
-              <span className="text-muted-foreground">({product.reviewCount})</span>
+              <span className="font-medium">{product.average_rating}</span>
+              <span className="text-muted-foreground">({product.review_count})</span>
             </div>
           )}
           <div className="flex items-center justify-between">
             <div className="flex items-baseline gap-2">
-              <span className="text-lg font-semibold">${product.price.toFixed(2)}</span>
-              {product.originalPrice && (
-                <span className="text-sm text-muted-foreground line-through">${product.originalPrice.toFixed(2)}</span>
+              <span className="text-lg font-semibold">${product.price.toString()}</span>
+              {product.price && (
+                <span className="text-sm text-muted-foreground line-through">${Number(product.price)}</span>
               )}
             </div>
-            <Button size="sm" onClick={handleAddToCart} disabled={!product.inStock} className="gap-1.5">
+            <Button size="sm" onClick={handleAddToCart} disabled={!(product.quantity > 0)} className="gap-1.5">
               <ShoppingCart className="h-4 w-4" />
               Add
             </Button>

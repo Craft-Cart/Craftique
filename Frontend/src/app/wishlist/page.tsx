@@ -181,7 +181,7 @@ export default function WishlistPage() {
                       </div>
                     )}
                   </div>
-                  {product.quantity > 0 ? (
+                  {(product.quantity > 0) ? (
                     <Badge variant="secondary">In Stock</Badge>
                   ) : (
                     <Badge variant="outline">Out of Stock</Badge>

@@ -77,7 +77,7 @@ export default function AdminDashboard() {
       setStats({
         totalUsers: usersData.total || 0,
         totalOrders: ordersData.total || 0,
-        totalRevenue: ordersData.orders?.reduce((sum: number, order: Order) => sum + order.total, 0) || 0,
+        totalRevenue: ordersData.orders?.reduce((sum: number, order: Order) => sum + Number(order.total), 0) || 0,
         totalProducts: productsData.total || 0,
       })
     } catch (error) {

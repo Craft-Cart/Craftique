@@ -26,7 +26,7 @@ export function StepCartReview({ items, onNext, onBack }: StepCartReviewProps) {
             <div key={item.product.id} className="flex items-center gap-4 border-b pb-4 last:border-0 last:pb-0">
               <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-muted">
                 <Image
-                  src={item.product.image || "/placeholder.svg"}
+                  src={item.product.images[0] || "/placeholder.svg"}
                   alt={item.product.name}
                   fill
                   className="object-cover"
@@ -35,7 +35,7 @@ export function StepCartReview({ items, onNext, onBack }: StepCartReviewProps) {
               <div className="flex-1">
                 <h4 className="font-medium">{item.product.name}</h4>
                 <p className="text-sm text-muted-foreground">
-                  ${item.product.price.toFixed(2)} × {item.quantity}
+                  ${Number(item.product.price)} × {item.quantity}
                 </p>
               </div>
               <span className="font-semibold">${(item.product.price * item.quantity).toFixed(2)}</span>

@@ -2,8 +2,6 @@ import { PrismaClient, Prisma } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-const BASE_URL = 'http://localhost:3001'
-
 async function main() {
   console.log('Starting seed...')
 
@@ -80,7 +78,7 @@ async function main() {
       barcode: '8901234567890',
       quantity: 45,
       categorySlug: 'eyewear',
-      images: [`${BASE_URL}/aviator-sunglasses.png`],
+      images: ['/aviator-sunglasses.png'],
       is_featured: true,
       weight: new Prisma.Decimal('0.05'),
       dimensions: { width: 14.5, height: 5.2, depth: 14.5, unit: 'cm' },
@@ -97,7 +95,7 @@ async function main() {
       barcode: '8901234567891',
       quantity: 30,
       categorySlug: 'watches',
-      images: [`${BASE_URL}/modern-smart-watch-black.jpg`],
+      images: ['/modern-smart-watch-black.jpg'],
       is_featured: true,
       weight: new Prisma.Decimal('0.15'),
       dimensions: { width: 4.4, height: 3.8, depth: 1.1, unit: 'cm' },
@@ -114,7 +112,7 @@ async function main() {
       barcode: '8901234567892',
       quantity: 35,
       categorySlug: 'audio',
-      images: [`${BASE_URL}/premium-black-wireless-headphones.jpg`],
+      images: ['/premium-black-wireless-headphones.jpg'],
       is_featured: true,
       weight: new Prisma.Decimal('0.25'),
       dimensions: { width: 18.5, height: 20.0, depth: 8.5, unit: 'cm' },
@@ -131,7 +129,7 @@ async function main() {
       barcode: '8901234567893',
       quantity: 25,
       categorySlug: 'computer-accessories',
-      images: [`${BASE_URL}/mechanical-keyboard-rgb.jpg`],
+      images: ['/mechanical-keyboard-rgb.jpg'],
       is_featured: true,
       weight: new Prisma.Decimal('0.95'),
       dimensions: { width: 44.0, height: 4.0, depth: 13.5, unit: 'cm' },
@@ -148,7 +146,7 @@ async function main() {
       barcode: '8901234567894',
       quantity: 50,
       categorySlug: 'computer-accessories',
-      images: [`${BASE_URL}/wireless-computer-mouse.jpg`],
+      images: ['/wireless-computer-mouse.jpg'],
       is_featured: false,
       weight: new Prisma.Decimal('0.12'),
       dimensions: { width: 7.5, height: 4.5, depth: 12.0, unit: 'cm' },
@@ -165,7 +163,7 @@ async function main() {
       barcode: '8901234567895',
       quantity: 40,
       categorySlug: 'travel-essentials',
-      images: [`${BASE_URL}/minimalist-black-backpack.jpg`],
+      images: ['/minimalist-black-backpack.jpg'],
       is_featured: false,
       weight: new Prisma.Decimal('0.65'),
       dimensions: { width: 30.0, height: 45.0, depth: 15.0, unit: 'cm' },
@@ -182,7 +180,7 @@ async function main() {
       barcode: '8901234567896',
       quantity: 60,
       categorySlug: 'travel-essentials',
-      images: [`${BASE_URL}/brown-leather-wallet.png`],
+      images: ['/brown-leather-wallet.png'],
       is_featured: false,
       weight: new Prisma.Decimal('0.08'),
       dimensions: { width: 9.5, height: 11.5, depth: 1.5, unit: 'cm' },
@@ -199,7 +197,7 @@ async function main() {
       barcode: '8901234567897',
       quantity: 55,
       categorySlug: 'tech-gadgets',
-      images: [`${BASE_URL}/portable-battery-charger.jpg`],
+      images: ['/portable-battery-charger.jpg'],
       is_featured: false,
       weight: new Prisma.Decimal('0.42'),
       dimensions: { width: 7.0, height: 14.5, depth: 2.8, unit: 'cm' },
