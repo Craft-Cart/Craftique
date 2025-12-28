@@ -74,16 +74,20 @@ export class AuthService {
       let roleString: string | undefined = undefined;
       let permissions: string[] = [];
       
-      // First, try to decode access_token or id_token to get roles from JWT claims
-      const jwt = require('jsonwebtoken');
+       // First, try to decode access_token or id_token to get roles from JWT claims
+       const jwt = require('jsonwebtoken');
+
+       // Log for debugging
+       logger.info('Starting login role retrieval');
       
       // Try access_token first (might have custom claims)
       try {
         const decodedAccessToken = jwt.decode(access_token);
         if (decodedAccessToken) {
-          roleString = decodedAccessToken['https://yourstore.com/role'] || 
-                      decodedAccessToken['https://auth0.com/roles']?.[0] ||
-                      decodedAccessToken.role;
+          roleString = decodedAccessToken['https://craftique-api/roles']?.[0] ||
+                       decodedAccessToken['https://yourstore.com/role'] ||
+                       decodedAccessToken['https://auth0.com/roles']?.[0] ||
+                       decodedAccessToken.role;
           permissions = decodedAccessToken['https://yourstore.com/permissions'] || 
                        decodedAccessToken['https://auth0.com/permissions'] ||
                        decodedAccessToken.permissions || 
@@ -98,9 +102,10 @@ export class AuthService {
         try {
           const decodedIdToken = jwt.decode(id_token);
           if (decodedIdToken) {
-            roleString = decodedIdToken['https://yourstore.com/role'] || 
-                        decodedIdToken['https://auth0.com/roles']?.[0] ||
-                        decodedIdToken.role;
+            roleString = decodedIdToken['https://craftique-api/roles']?.[0] ||
+                         decodedIdToken['https://yourstore.com/role'] ||
+                         decodedIdToken['https://auth0.com/roles']?.[0] ||
+                         decodedIdToken.role;
             permissions = decodedIdToken['https://yourstore.com/permissions'] || 
                          decodedIdToken['https://auth0.com/permissions'] ||
                          decodedIdToken.permissions || 
@@ -165,6 +170,7 @@ export class AuthService {
 
       // Normalize role to UserRole enum
       const role = this.normalizeRole(roleString);
+      logger.info('Normalized role', { auth0Id, original: roleString, normalized: role });
 
       // Find or create user in database using upsert to avoid duplicate creation
       // This handles cases where user was created by register() or verifyToken()
@@ -344,10 +350,83 @@ export class AuthService {
       const decodedToken = decoded as any;
       const auth0Id = decodedToken.sub;
 
+      // Log token claims for debugging
+      logger.info('Decoded token claims', { claims: decodedToken });
+
+      // Get role from JWT token claims first (most reliable if Auth0 is configured)
+      // Then fallback to Management API
+      let roleString: string | undefined = undefined;
+      let permissions: string[] = [];
+
+      // First, try to get role from decoded token (from verifyToken)
+      roleString = decodedToken['https://craftique-api/roles']?.[0] ||
+                   decodedToken['https://yourstore.com/role'] ||
+                   decodedToken['https://auth0.com/roles']?.[0] ||
+                   decodedToken.role;
+
+      permissions = decodedToken['https://craftique-api/permissions'] ||
+                    decodedToken['https://yourstore.com/permissions'] ||
+                    decodedToken.permissions || [];
+
+      // If role not found in token, try Management API
+      if (!roleString) {
+        try {
+          const managementToken = await this.getAuth0ManagementToken();
+          const userDetails = await axios.get(
+            `https://${config.auth0.domain}/api/v2/users/${encodeURIComponent(auth0Id)}`,
+            {
+              headers: {
+                Authorization: `Bearer ${managementToken}`,
+              },
+            }
+          );
+
+          // Check app_metadata first (preferred for roles)
+          const appMetadata = userDetails.data.app_metadata || {};
+          const userMetadata = userDetails.data.user_metadata || {};
+
+          roleString = appMetadata.role ||
+                       userMetadata.role ||
+                       appMetadata['https://yourstore.com/role'] ||
+                       userMetadata['https://yourstore.com/role'];
+
+          if (!permissions.length) {
+            permissions = appMetadata.permissions ||
+                          userMetadata.permissions ||
+                          appMetadata['https://yourstore.com/permissions'] ||
+                          userMetadata['https://yourstore.com/permissions'] ||
+                          [];
+          }
+
+          // Also check if role is in Auth0 roles (if using Auth0's built-in roles)
+          if (userDetails.data.roles && userDetails.data.roles.length > 0) {
+            // Map Auth0 roles to our roles
+            const auth0Role = userDetails.data.roles[0].toLowerCase();
+            if (['admin', 'moderator', 'customer'].includes(auth0Role)) {
+              roleString = auth0Role;
+            }
+          }
+
+          logger.info('Retrieved role from Management API', { auth0Id, role: roleString });
+        } catch (metadataError: any) {
+          logger.warn('Failed to get user metadata from Management API', {
+            error: metadataError.message,
+            status: metadataError.response?.status,
+            auth0Id,
+          });
+          // Role will remain undefined and default to 'customer'
+        }
+      } else {
+        logger.info('Retrieved role from JWT token', { auth0Id, role: roleString });
+      }
+
+      // Normalize role to UserRole enum
+      const role = this.normalizeRole(roleString);
+
       // Get user from database or create if doesn't exist (auto-sync)
       // Use upsert to handle race conditions gracefully
       let user = await this.userRepository.findByAuth0Id(auth0Id);
-      
+
       if (!user) {
         // Auto-create user if they don't exist (from frontend Auth0 login)
         // Get user info from Auth0 to populate user data
@@ -361,76 +440,6 @@ export class AuthService {
             }
           );
           logger.info('User info from Auth0', { userInfo: userInfo.data });
-
-          // Get role from JWT token claims first (most reliable if Auth0 is configured)
-          // Then fallback to Management API
-          let roleString: string | undefined = undefined;
-          let permissions: string[] = [];
-          
-          // First, try to get role from decoded token (from verifyToken)
-          roleString = decodedToken['https://yourstore.com/role'] || 
-                      decodedToken['https://auth0.com/roles']?.[0] ||
-                      decodedToken.role;
-          
-          permissions = decodedToken['https://yourstore.com/permissions'] || 
-                       decodedToken['https://auth0.com/permissions'] ||
-                       decodedToken.permissions || 
-                       [];
-          
-          // If role not found in token, try Management API
-          if (!roleString) {
-            try {
-              const managementToken = await this.getAuth0ManagementToken();
-              const userDetails = await axios.get(
-                `https://${config.auth0.domain}/api/v2/users/${encodeURIComponent(auth0Id)}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${managementToken}`,
-                  },
-                }
-              );
-
-              // Check app_metadata first (preferred for roles)
-              const appMetadata = userDetails.data.app_metadata || {};
-              const userMetadata = userDetails.data.user_metadata || {};
-              
-              roleString = appMetadata.role || 
-                          userMetadata.role || 
-                          appMetadata['https://yourstore.com/role'] ||
-                          userMetadata['https://yourstore.com/role'];
-              
-              if (!permissions.length) {
-                permissions = appMetadata.permissions || 
-                           userMetadata.permissions ||
-                           appMetadata['https://yourstore.com/permissions'] ||
-                           userMetadata['https://yourstore.com/permissions'] ||
-                           [];
-              }
-
-              // Also check if role is in Auth0 roles (if using Auth0's built-in roles)
-              if (userDetails.data.roles && userDetails.data.roles.length > 0) {
-                // Map Auth0 roles to our roles
-                const auth0Role = userDetails.data.roles[0].toLowerCase();
-                if (['admin', 'moderator', 'customer'].includes(auth0Role)) {
-                  roleString = auth0Role;
-                }
-              }
-              
-              logger.info('Retrieved role from Management API', { auth0Id, role: roleString });
-            } catch (metadataError: any) {
-              logger.warn('Failed to get user metadata from Management API', {
-                error: metadataError.message,
-                status: metadataError.response?.status,
-                auth0Id,
-              });
-              // Role will remain undefined and default to 'customer'
-            }
-          } else {
-            logger.info('Retrieved role from JWT token', { auth0Id, role: roleString });
-          }
-
-          // Normalize role to UserRole enum
-          const role = this.normalizeRole(roleString);
 
           // Use upsert to avoid race condition - creates if doesn't exist, updates if exists
           user = await this.userRepository.upsertByAuth0Id(
@@ -462,8 +471,12 @@ export class AuthService {
           throw new AuthenticationError('User not found and could not be synced');
         }
       } else {
-        // Update last login for existing users
-        await this.userRepository.updateLastLogin(user.id);
+        // Update last login and sync role/permissions for existing users
+        await this.userRepository.update(user.id, {
+          last_login: new Date(),
+          role: role,
+          permissions: permissions,
+        });
       }
 
       return {

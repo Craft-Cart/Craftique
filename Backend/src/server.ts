@@ -1,4 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
+import path from 'path';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import { setupSecurityMiddleware } from './middleware/security';
@@ -24,6 +25,10 @@ const app: Express = express();
 
 // Trust proxy (for Cloudflare, load balancers)
 app.set('trust proxy', 1);
+
+// Serve static files (images, etc.)
+app.use('/public', express.static(path.join(__dirname, '../public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Body parsing middleware
 // Note: Paymob webhook needs raw body for HMAC verification
