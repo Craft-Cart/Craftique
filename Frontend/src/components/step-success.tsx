@@ -41,7 +41,7 @@ export function StepSuccess({ order }: StepSuccessProps) {
             <div className="flex justify-between border-b pb-2">
               <span className="text-muted-foreground">Shipping</span>
               <span className="font-medium">
-                {order.shipping_cost === 0 ? "FREE" : `$${order.shipping_cost.toFixed(2)}`}
+                {order.shipping === 0 ? "FREE" : `$${order.shipping.toFixed(2)}`}
               </span>
             </div>
             <div className="flex justify-between border-b pb-2">
@@ -56,7 +56,7 @@ export function StepSuccess({ order }: StepSuccessProps) {
 
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              A confirmation email has been sent to <strong>{order.shipping.email}</strong>
+              A confirmation email has been sent to <strong>{order.shipping_address.email}</strong>
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">

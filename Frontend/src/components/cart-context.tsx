@@ -53,11 +53,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       if (existingItem) {
         return prev.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item,
+          item.product.id === product.id
+            ? { ...item, quantity: item.quantity + quantity, total: (item.quantity + quantity) * product.price }
+            : item,
         )
       }
 
-      return [...prev, { product, quantity }]
+      return [...prev, { product, quantity, total: quantity * product.price }]
     })
   }, [])
 
@@ -72,7 +74,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      setItems((prev) => prev.map((item) => (item.product.id === productId ? { ...item, quantity } : item)))
+      setItems((prev) =>
+        prev.map((item) =>
+          item.product.id === productId ? { ...item, quantity, total: quantity * item.product.price } : item,
+        ),
+      )
     },
     [removeItem],
   )

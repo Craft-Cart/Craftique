@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { API_ENDPOINTS } from '@/lib/endpoints'
 import { Category } from '@/lib/types'
 import { useRBAC } from '@/hooks/use-rbac'
+import { getAuthToken } from '@/lib/get-auth-token'
 
 export function CategoryManagement() {
   const { canDeleteCategories } = useRBAC()
@@ -33,8 +34,9 @@ export function CategoryManagement() {
 
   const fetchCategories = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.categories.list, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
       setCategories(data || [])
@@ -47,15 +49,16 @@ export function CategoryManagement() {
 
   const createCategory = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.categories.list, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newCategory),
       })
-      
+
       if (response.ok) {
         setIsCreateDialogOpen(false)
         setNewCategory({
@@ -76,10 +79,11 @@ export function CategoryManagement() {
     }
 
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.categories.detail(editingCategory.id), {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -88,7 +92,7 @@ export function CategoryManagement() {
           is_active: editingCategory.is_active,
         }),
       })
-      
+
       if (response.ok) {
         setIsEditDialogOpen(false)
         setEditingCategory(null)
@@ -105,13 +109,14 @@ export function CategoryManagement() {
     }
 
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.categories.detail(categoryId), {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
         },
       })
-      
+
       if (response.ok) {
         fetchCategories()
       }
@@ -207,16 +212,16 @@ export function CategoryManagement() {
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => openEditDialog(category)}
                     >
                       Edit
                     </Button>
-                    {canDeleteCategories && (
-                      <Button 
-                        variant="destructive" 
+                    {canDeleteCategories() && (
+                      <Button
+                        variant="destructive"
                         size="sm"
                         onClick={() => deleteCategory(category.id)}
                       >

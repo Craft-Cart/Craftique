@@ -187,6 +187,16 @@ export interface FilterParams {
   search?: string
 }
 
+export interface ProductFilters {
+  page?: number
+  limit?: number
+  category?: string
+  search?: string
+  inStock?: boolean
+  minPrice?: number
+  maxPrice?: number
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   pagination: {
@@ -207,6 +217,7 @@ export interface ShippingDetails {
   state: string
   zipCode: string
   country: string
+  notes?: string
 }
 
 export interface PaymentDetails {
@@ -214,6 +225,7 @@ export interface PaymentDetails {
   cardName: string
   expiryDate: string
   cvv: string
+  billingAddress?: Address
 }
 
 export interface Order {
@@ -225,6 +237,7 @@ export interface Order {
   subtotal: number
   tax: number
   shipping: number
+  shipping_cost?: number
   discount: number
   total: number
   currency: string

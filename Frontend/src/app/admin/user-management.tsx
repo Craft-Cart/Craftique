@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { API_ENDPOINTS } from '@/lib/endpoints'
 import { User, UserRole } from '@/lib/types'
+import { getAuthToken } from '@/lib/get-auth-token'
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([])
@@ -28,8 +29,9 @@ export function UserManagement() {
 
   const fetchUsers = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.users.list, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
       setUsers(data.users || [])
@@ -42,18 +44,19 @@ export function UserManagement() {
 
   const createUser = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.users.list, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(newUser),
       })
-      
+
       if (response.ok) {
         setIsCreateDialogOpen(false)
-        setNewUser({ email: '', name: '', role: 'customer' })
+        setNewUser({ email: '', name: '', role: UserRole.customer })
         fetchUsers()
       }
     } catch (error) {
@@ -63,15 +66,16 @@ export function UserManagement() {
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.users.detail(userId), {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ role: newRole }),
       })
-      
+
       if (response.ok) {
         fetchUsers()
       }

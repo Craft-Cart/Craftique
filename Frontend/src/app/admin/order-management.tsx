@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { API_ENDPOINTS } from '@/lib/endpoints'
 import { Order, OrderStatus } from '@/lib/types'
+import { getAuthToken } from '@/lib/get-auth-token'
 
 export function OrderManagement() {
   const [orders, setOrders] = useState<Order[]>([])
@@ -19,8 +20,9 @@ export function OrderManagement() {
 
   const fetchOrders = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.orders.list, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
       setOrders(data.orders || [])
@@ -33,15 +35,16 @@ export function OrderManagement() {
 
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.orders.detail(orderId), {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: newStatus }),
       })
-      
+
       if (response.ok) {
         fetchOrders()
       }

@@ -13,6 +13,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { API_ENDPOINTS } from '@/lib/endpoints'
 import { Product, Category } from '@/lib/types'
+import { getAuthToken } from '@/lib/get-auth-token'
 
 export function ProductManagement() {
   const [products, setProducts] = useState<Product[]>([])
@@ -36,8 +37,9 @@ export function ProductManagement() {
 
   const fetchProducts = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.items.list, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
       setProducts(data.items || [])
@@ -60,10 +62,11 @@ export function ProductManagement() {
 
   const createProduct = async () => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.items.list, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -72,7 +75,7 @@ export function ProductManagement() {
           quantity: parseInt(newProduct.quantity),
         }),
       })
-      
+
       if (response.ok) {
         setIsCreateDialogOpen(false)
         setNewProduct({
@@ -93,15 +96,16 @@ export function ProductManagement() {
 
   const updateProductStatus = async (productId: string, isActive: boolean) => {
     try {
+      const token = await getAuthToken()
       const response = await fetch(API_ENDPOINTS.items.detail(productId), {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ is_active: isActive }),
       })
-      
+
       if (response.ok) {
         fetchProducts()
       }
