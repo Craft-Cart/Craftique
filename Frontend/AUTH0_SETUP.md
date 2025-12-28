@@ -1,98 +1,225 @@
-# Auth0 Integration Setup
+# Auth0 Configuration
 
-This Next.js app has been integrated with Auth0 for authentication. Follow these steps to complete the setup:
+This application uses Auth0 for authentication with the Next.js 16 SDK.
 
-## 1. Create Auth0 Application
+## Setup
 
-1. Go to [Auth0 Dashboard](https://manage.auth0.com/)
-2. Create a new application → "Regular Web Application"
-3. Configure:
-   - Allowed Callback URLs: `http://localhost:3000/api/auth/callback`
-   - Allowed Logout URLs: `http://localhost:3000`
-   - Allowed Web Origins: `http://localhost:3000`
+### 1. Environment Variables
 
-## 2. Set Environment Variables
-
-Copy `.env.local.example` to `.env.local` and fill in your Auth0 credentials:
+Copy `.env.example` to `.env.local` and configure:
 
 ```bash
-cp .env.local.example .env.local
+# Required
+AUTH0_DOMAIN=your-tenant.auth0.com
+AUTH0_CLIENT_ID=your-client-id
+AUTH0_CLIENT_SECRET=your-client-secret
+AUTH0_SECRET=$(openssl rand -hex 32)  # Generate a 32-byte hex secret
+APP_BASE_URL=http://localhost:3000
+
+# Optional - for custom APIs
+AUTH0_AUDIENCE=https://your-api-identifier
 ```
 
-Update the following variables:
-- `AUTH0_SECRET`: Generate a random secret string
-- `AUTH0_DOMAIN`: Your Auth0 domain (e.g., `your-tenant.auth0.com`)
-- `AUTH0_CLIENT_ID`: Your application's Client ID
-- `AUTH0_CLIENT_SECRET`: Your application's Client Secret
-- `APP_BASE_URL`: Your application URL (http://localhost:3000 for development)
+### 2. Auth0 Application Setup
 
-## 3. Generate Auth0 Secret
+Create an Auth0 application with:
 
-Generate a secure secret for the `AUTH0_SECRET` environment variable:
+- **Type**: Regular Web Application
+- **Allowed Callback URLs**: `http://localhost:3000/auth/callback`
+- **Allowed Logout URLs**: `http://localhost:3000`
 
-```bash
-openssl rand -base64 32
-```
+**Important**: To enable refresh tokens and prevent "access token expired" errors:
+1. Go to Auth0 Dashboard → Applications → Your Application
+2. Navigate to "Advanced Settings" → "Grant Types"
+3. Ensure "Refresh Token" is enabled
+4. This allows the SDK to automatically refresh expired tokens
 
-## 4. Features Implemented
+## Available Routes
 
-- **Authentication**: Login/logout functionality via Auth0
-- **Protected Routes**: Profile page requires authentication
-- **User Session**: Session management with automatic token refresh
-- **User Profile**: Display user information from Auth0
-- **TypeScript Support**: Type-safe user data handling
-- **Middleware**: Route protection and session validation
+### Auth0 SDK Routes (Automatic)
 
-## 5. API Endpoints
+The SDK automatically provides these routes:
 
-- `/api/auth/login` - Initiates Auth0 login
-- `/api/auth/logout` - Clears Auth0 session
-- `/api/me` - Returns current user profile (protected)
+| Route | Description |
+|-------|-------------|
+| `/auth/login` | Login page |
+| `/auth/logout` | Logout |
+| `/auth/callback` | OAuth callback (add to Auth0) |
+| `/auth/profile` | Session profile |
+| `/auth/access-token` | Access token |
+| `/auth/backchannel-logout` | Backchannel logout |
 
-## 6. Protected Pages
+### Custom API Routes
 
-- `/profile` - User profile page (requires authentication)
+This app also has custom routes for backend integration:
 
-## 7. Usage in Components
+| Route | Description | Purpose |
+|-------|-------------|----------|
+| `/api/auth/sync` | Sync Auth0 user with backend | Creates/updates user in database |
+| `/api/auth/token` | Get access token | Alias for `/auth/access-token` (for legacy code) |
+| `/api/me` | Get user profile | Alias for `/auth/profile` (for backend integration) |
 
-```tsx
-import { useUser } from '@auth0/nextjs-auth0/client';
+**Note**: You can use either SDK routes or custom API routes. Custom routes provide additional backend sync functionality.
 
-export function MyComponent() {
-  const { user, isLoading, error } = useUser();
-  
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!user) return <div>Please login</div>;
-  
-  return <div>Welcome, {user.name}!</div>;
+## Usage
+
+### Server Components
+
+```typescript
+import { auth0 } from "@/lib/auth0";
+
+export default async function Page() {
+  const session = await auth0.getSession();
+
+  if (!session) {
+    return <a href="/auth/login">Log in</a>;
+  }
+
+  return <h1>Welcome, {session.user.name}!</h1>;
 }
 ```
 
-## 8. Server-Side Usage
+### Client Components
 
-```tsx
-import { auth0 } from '@/lib/auth0';
+```typescript
+"use client";
 
-export default auth0.withPageAuthRequired(async function MyPage() {
+import { useUser } from "@auth0/nextjs-auth0/client";
+
+export function UserProfile() {
+  const { user, isLoading } = useUser();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!user) return <a href="/auth/login">Log in</a>;
+
+  return <h1>Welcome, {user.name}!</h1>;
+}
+```
+
+### Middleware
+
+Authentication is handled by `src/proxy.ts`. The SDK automatically:
+
+- Protects routes when users are not authenticated
+- Manages sessions
+- Handles authentication flows
+
+To protect routes, check for session in server components:
+
+```typescript
+import { auth0 } from "@/lib/auth0";
+
+export default async function Profile() {
   const session = await auth0.getSession();
-  return <div>Hello, {session.user.name}!</div>;
+
+  if (!session) {
+    redirect('/auth/login');
+  }
+
+  // Protected content
+}
+```
+
+## Accessing User Data
+
+### Server-Side
+
+```typescript
+const session = await auth0.getSession();
+console.log(session.user.name);
+console.log(session.user.email);
+```
+
+### Client-Side
+
+```typescript
+const { user } = useUser();
+console.log(user.name);
+console.log(user.email);
+```
+
+## Custom Claims
+
+Add custom claims to user tokens in Auth0:
+
+```typescript
+const session = await auth0.getSession();
+const role = session.user['https://your-namespace.com/role'];
+```
+
+## Token Expiration Handling
+
+This app automatically handles expired access tokens:
+
+1. **Automatic Refresh**: With refresh tokens enabled, the SDK refreshes expired tokens automatically
+2. **Graceful Logout**: If tokens can't be refreshed, users are redirected to `/auth/logout`
+3. **Client-Side Detection**: The auth service detects expired sessions and redirects to login
+
+## Testing
+
+For testing with demo mode, see `src/lib/demo-auth.ts`.
+
+## Advanced Configuration
+
+### Auto-Sync User on Login
+
+You can automatically sync users to your backend after successful login using `beforeSessionSaved` hook:
+
+```typescript
+import { Auth0Client } from '@auth0/nextjs-auth0/server';
+
+export const auth0 = new Auth0Client({
+  // ... other config
+  beforeSessionSaved: async ({ session, req, res }) => {
+    // Sync user to backend
+    try {
+      await fetch(`${process.env.API_BASE_URL}/auth/sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error) {
+      console.error('Failed to sync user:', error);
+      // Don't block login if sync fails
+    }
+    return session;
+  },
 });
 ```
 
-## 9. Development
+### Disable Access Token Endpoint
 
-Start the development server:
+If you don't need client-side access tokens, disable the endpoint for better security:
 
-```bash
-npm run dev
+```typescript
+export const auth0 = new Auth0Client({
+  // ... other config
+  enableAccessTokenEndpoint: false,
+});
 ```
 
-The authentication flow will work at http://localhost:3000
+### Custom Logout URL
 
-## 10. Production Deployment
+Set custom logout redirect:
 
-For production deployment, update these environment variables:
-- `APP_BASE_URL` to your production URL
-- Add your production domain to Auth0 allowed URLs
-- Ensure HTTPS is used (required for production)
+```typescript
+export const auth0 = new Auth0Client({
+  // ... other config
+  routes: {
+    logout: '/custom-logout',
+  },
+});
+```
+
+## Troubleshooting
+
+### "Access token has expired" error
+
+If you see this error, ensure:
+1. Refresh tokens are enabled in Auth0 Dashboard
+2. The `offline_access` scope is included in authorizationParameters
+3. Your Auth0 application is configured as "Regular Web Application"
+
+The SDK will automatically redirect users to `/auth/logout` when tokens expire and can't be refreshed.
