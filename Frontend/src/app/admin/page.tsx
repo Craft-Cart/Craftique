@@ -91,7 +91,7 @@ export default function AdminDashboard() {
     return <div className="p-6">Loading dashboard...</div>
   }
 
-  if (!canAccessAdmin) {
+  if (!canAccessAdmin()) {
     return <div className="p-6">
       <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
       <p className="mb-4">You don't have permission to access the admin dashboard.</p>
@@ -104,12 +104,12 @@ export default function AdminDashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">{isAdmin ? 'Admin Dashboard' : 'Moderator Dashboard'}</h1>
-        <Badge variant="secondary">{isAdmin ? 'Administrator' : 'Moderator'}</Badge>
+        <h1 className="text-3xl font-bold">{isAdmin() ? 'Admin Dashboard' : 'Moderator Dashboard'}</h1>
+        <Badge variant="secondary">{isAdmin() ? 'Administrator' : 'Moderator'}</Badge>
       </div>
 
       {/* Stats Cards - Only show for Admins */}
-      {isAdmin && (
+      {isAdmin() && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
       )}
 
       {/* For moderators, show only categories and products count */}
-      {isModerator && (
+      {isModerator() && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -173,40 +173,40 @@ export default function AdminDashboard() {
       )}
 
       {/* Management Tabs */}
-      <Tabs defaultValue={isModerator ? "categories" : "users"} className="space-y-4">
+      <Tabs defaultValue={isModerator() ? "categories" : "users"} className="space-y-4">
         <TabsList>
-          {isAdmin && canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
-          {isAdmin && <TabsTrigger value="orders">Orders</TabsTrigger>}
-          {canManageCategories && <TabsTrigger value="categories">Categories</TabsTrigger>}
-          {canManageItems && <TabsTrigger value="products">Products</TabsTrigger>}
-          {isAdmin && canAccessAnalytics && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
+          {isAdmin() && canManageUsers() && <TabsTrigger value="users">Users</TabsTrigger>}
+          {isAdmin() && <TabsTrigger value="orders">Orders</TabsTrigger>}
+          {canManageCategories() && <TabsTrigger value="categories">Categories</TabsTrigger>}
+          {canManageItems() && <TabsTrigger value="products">Products</TabsTrigger>}
+          {isAdmin() && canAccessAnalytics() && <TabsTrigger value="analytics">Analytics</TabsTrigger>}
         </TabsList>
 
-        {isAdmin && canManageUsers && (
+        {isAdmin() && canManageUsers() && (
           <TabsContent value="users">
             <UserManagement />
           </TabsContent>
         )}
 
-        {isAdmin && (
+        {isAdmin() && (
           <TabsContent value="orders">
             <OrderManagement />
           </TabsContent>
         )}
 
-        {canManageCategories && (
+        {canManageCategories() && (
           <TabsContent value="categories">
             <CategoryManagement />
           </TabsContent>
         )}
 
-        {canManageItems && (
+        {canManageItems() && (
           <TabsContent value="products">
             <ProductManagement />
           </TabsContent>
         )}
 
-        {isAdmin && canAccessAnalytics && (
+        {isAdmin() && canAccessAnalytics() && (
           <TabsContent value="analytics">
             <AnalyticsDashboard />
           </TabsContent>

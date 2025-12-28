@@ -62,12 +62,12 @@ export function SiteHeader() {
           </Link>
           
           {/* Admin/Moderator link - only show for privileged users */}
-          {canAccessAdmin && (
+          {canAccessAdmin() && (
             <Link
               href="/admin"
               className="text-sm font-medium transition-colors hover:text-primary"
             >
-              {isAdmin ? 'Admin' : 'Moderator'}
+              {isAdmin() ? 'Admin' : 'Moderator'}
             </Link>
           )}
           

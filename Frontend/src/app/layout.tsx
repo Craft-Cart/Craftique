@@ -6,7 +6,6 @@ import "./globals.css";
 import { CartProvider } from "@/components/cart-context";
 import { SiteHeader } from "@/components/site-header";
 import { AuthProvider } from "@/components/auth-provider";
-import { AuthRedirect } from "@/components/auth-redirect";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
@@ -44,14 +43,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geist.variable} ${geistMono.variable} font-sans antialiased`}>
         <AuthProvider>
-          <AuthRedirect>
             <CartProvider>
               <div className="min-h-screen bg-background">
                 <SiteHeader />
                 {children}
               </div>
             </CartProvider>
-          </AuthRedirect>
         </AuthProvider>
         <Analytics />
       </body>

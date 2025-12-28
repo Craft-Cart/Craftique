@@ -1,4 +1,4 @@
-import { CheckoutService } from '@/services/checkout';
+import { CheckoutService } from '@/lib/checkout';
 import { API_ENDPOINTS } from '@/lib/endpoints';
 
 // Mock fetch

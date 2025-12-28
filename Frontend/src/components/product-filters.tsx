@@ -89,7 +89,7 @@ export function ProductFilters({ categories }: ProductFiltersProps) {
                   className="flex flex-1 cursor-pointer items-center justify-between text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   <span>{category.name}</span>
-                  <span className="text-muted-foreground">({category.count})</span>
+                  <span className="text-muted-foreground">({category.items_count})</span>
                 </label>
               </div>
             ))}

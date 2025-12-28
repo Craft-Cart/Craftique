@@ -1,4 +1,4 @@
-import { CatalogService } from '@/services/catalog';
+import { CatalogService } from '@/lib/catalog';
 import { API_ENDPOINTS } from '@/lib/endpoints';
 
 // Mock fetch
