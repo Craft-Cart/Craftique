@@ -63,6 +63,10 @@ describe('CheckoutService', () => {
       ] as any;
 
       const shipping = {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        phone: '1234567890',
         address: '123 Main St',
         city: 'Cairo',
         state: 'Cairo',
@@ -71,7 +75,10 @@ describe('CheckoutService', () => {
       };
 
       const payment = {
-        method: 'card',
+        cardNumber: '4111111111111111',
+        cardName: 'John Doe',
+        expiryDate: '12/25',
+        cvv: '123',
         billingAddress: shipping,
       };
 
