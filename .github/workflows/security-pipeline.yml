@@ -77,13 +77,7 @@ jobs:
       - name: Run Semgrep SAST
         uses: semgrep/semgrep-action@v1
         with:
-          config: p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
-          baseline-ref: ""
-
-      - name: Run Our Semgrep SAST
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: .semgrep.yml
+          config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
           baseline-ref: ""
           output: semgrep-custom-results.json
         continue-on-error: true
