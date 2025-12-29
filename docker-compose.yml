@@ -22,6 +22,20 @@ services:
     networks:
       - craftique-network
 
+  db-init:
+    image: postgres:15-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./Backend/prisma:/docker-entrypoint-initdb.d:ro
+    entrypoint: ["sh", "-c"]
+    command: >
+      "echo 'Waiting for DB...' &&
+       until pg_isready -h postgres -U craftique; do sleep 2; done &&
+       psql -h postgres -U craftique -d craftique -f /docker-entrypoint-initdb.d/setup-roles.sql
+      "
+
   # Backend API
   backend:
     build:
@@ -66,8 +80,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     networks:
       - craftique-network
     volumes:
