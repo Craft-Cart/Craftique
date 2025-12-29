@@ -4,21 +4,21 @@
  */
 
 export async function getAuthToken(): Promise<string> {
+  console.log('[getAuthToken] Getting auth token');
   try {
-    // Import auth-service dynamically to avoid circular dependencies
     const { authService } = await import('@/lib/auth-service');
 
-    // Use the proper auth-service method that handles HttpOnly cookies
     const token = await authService['getAuthToken']();
 
     if (!token) {
-      console.warn('No auth token available');
+      console.warn('[getAuthToken] No auth token available');
       throw new Error('No auth token available');
     }
 
+    console.log('[getAuthToken] Token obtained successfully');
     return token;
   } catch (error) {
-    console.error('Error getting auth token:', error);
+    console.error('[getAuthToken] Error:', error);
     throw error;
   }
 }

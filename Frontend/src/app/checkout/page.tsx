@@ -13,6 +13,7 @@ import type { ShippingDetails, PaymentDetails, Order } from "@/lib/types"
 import { useEffect } from "react"
 
 export default function CheckoutPage() {
+  console.log('[Page: Checkout] Component mounting');
   const router = useRouter()
   const { items, clearCart } = useCart()
   const [currentStep, setCurrentStep] = useState(1)
@@ -20,9 +21,10 @@ export default function CheckoutPage() {
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null)
   const [order, setOrder] = useState<Order | null>(null)
 
-  // Redirect to cart if empty
   useEffect(() => {
+    console.log('[Page: Checkout] Items in cart:', items.length);
     if (items.length === 0 && currentStep < 4) {
+      console.log('[Page: Checkout] Redirecting to cart - empty cart');
       router.push("/cart")
     }
   }, [items.length, currentStep, router])
@@ -37,12 +39,14 @@ export default function CheckoutPage() {
   }
 
   const handlePaymentNext = async (data: PaymentDetails) => {
+    console.log('[Page: Checkout] Processing payment step');
     setPaymentData(data)
 
     if (!shippingData) return
 
-    // Submit order
+    console.log('[Page: Checkout] Submitting order with', items.length, 'items');
     const newOrder = await CheckoutService.submitOrder(items, shippingData, data)
+    console.log('[Page: Checkout] Order submitted:', newOrder?.id);
     setOrder(newOrder)
     clearCart()
     setCurrentStep(4)

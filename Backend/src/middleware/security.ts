@@ -5,7 +5,7 @@ import { Express } from 'express';
 import { config } from '../config/env';
 
 export const setupSecurityMiddleware = (app: Express) => {
-  // Helmet for security headers
+  console.log('[SecurityMiddleware] setupSecurityMiddleware - Setting up security middleware');
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -18,9 +18,8 @@ export const setupSecurityMiddleware = (app: Express) => {
     crossOriginEmbedderPolicy: false,
   }));
 
-  // CORS configuration
   app.use(cors({
-    origin: config.nodeEnv === 'production' 
+    origin: config.nodeEnv === 'production'
       ? process.env.FRONTEND_URL || 'https://yourstore.com'
       : ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
@@ -28,7 +27,6 @@ export const setupSecurityMiddleware = (app: Express) => {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key'],
   }));
 
-  // Rate limiting
   const limiter = rateLimit({
     windowMs: config.security.rateLimitWindowMs,
     max: config.security.rateLimitMaxRequests,
@@ -39,10 +37,9 @@ export const setupSecurityMiddleware = (app: Express) => {
 
   app.use('/api', limiter);
 
-  // Stricter rate limiting for auth endpoints
   const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // 5 requests per window
+    windowMs: 15 * 60 * 1000,
+    max: 5,
     message: 'Too many authentication attempts, please try again later.',
     skipSuccessfulRequests: true,
   });
@@ -50,5 +47,6 @@ export const setupSecurityMiddleware = (app: Express) => {
   app.use('/api/v1/auth/login', authLimiter);
   app.use('/api/v1/auth/register', authLimiter);
   app.use('/api/v1/auth/password/forgot', authLimiter);
+  console.log('[SecurityMiddleware] setupSecurityMiddleware - Security middleware configured');
 };
 

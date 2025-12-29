@@ -16,8 +16,8 @@ export class AuthService {
    * Uses Next.js API route for server-side token access
    */
   async syncUser(auth0User?: Auth0User): Promise<User> {
+    console.log('[AuthService] syncUser - Syncing user with backend');
     try {
-      // Use Next.js API route to sync (handles token access server-side)
       const response = await fetch('/api/auth/sync', {
         method: 'POST',
         credentials: 'include',
@@ -27,8 +27,8 @@ export class AuthService {
       })
 
       if (!response.ok) {
+        console.log('[AuthService] syncUser - Sync failed with status:', response.status);
         if (response.redirected || response.status === 401) {
-          // Session expired - redirect to login
           if (typeof window !== 'undefined') {
             window.location.href = '/auth/login'
           }
@@ -41,12 +41,11 @@ export class AuthService {
       const data = await response.json()
       this.currentUser = data.user
       this.roleCache.set(data.user.email, data.user.role)
+      console.log('[AuthService] syncUser - User synced successfully:', data.user.email);
       return data.user
     } catch (error) {
-      console.error('Error syncing user with backend:', error)
-      // If it's a redirect error, let it bubble up
+      console.error('[AuthService] syncUser - Error syncing user:', error);
       if (error instanceof TypeError && error.message?.includes('fetch')) {
-        // Might be a redirect, check for expired session
         if (typeof window !== 'undefined') {
           window.location.href = '/auth/login'
         }
@@ -59,9 +58,10 @@ export class AuthService {
    * Get current authenticated user from backend
    */
   async getCurrentUser(): Promise<User | null> {
+    console.log('[AuthService] getCurrentUser - Fetching current user');
     try {
       const token = await this.getAuthToken()
-      
+
       const response = await fetch(`${this.apiBaseUrl}/users/me`, {
         method: 'GET',
         headers: {
@@ -73,7 +73,8 @@ export class AuthService {
 
       if (!response.ok) {
         if (response.status === 401) {
-          this.currentUser = null // User not authenticated
+          console.log('[AuthService] getCurrentUser - User not authenticated');
+          this.currentUser = null
           return null
         }
         throw new Error(`Failed to get current user: ${response.statusText}`)
@@ -82,9 +83,10 @@ export class AuthService {
       const user = await response.json()
       this.currentUser = user
       this.roleCache.set(user.email, user.role)
+      console.log('[AuthService] getCurrentUser - Current user fetched:', user.email);
       return user
     } catch (error) {
-      console.error('Error getting current user:', error)
+      console.error('[AuthService] getCurrentUser - Error:', error);
       this.currentUser = null
       return null
     }
@@ -99,15 +101,14 @@ export class AuthService {
       throw new Error('getAuthToken can only be called from client-side')
     }
 
+    console.log('[AuthService] getAuthToken - Getting auth token');
     try {
-      // Use Auth0 SDK's built-in /auth/access-token route
-      // This route is provided automatically by the SDK and handles HttpOnly cookies
       const response = await fetch('/auth/access-token', {
         method: 'GET',
         credentials: 'include',
       })
 
-      console.log('Auth token response:', {
+      console.log('[AuthService] getAuthToken - Auth token response:', {
         ok: response.ok,
         status: response.status,
         redirected: response.redirected,
@@ -116,7 +117,6 @@ export class AuthService {
 
       if (!response.ok) {
         if (response.redirected || response.status === 401) {
-          // SDK will handle redirect automatically, just throw error
           if (typeof window !== 'undefined') {
             window.location.href = '/auth/login'
           }
@@ -126,16 +126,16 @@ export class AuthService {
       }
 
       const data = await response.json()
-      console.log('Token data received:', { hasToken: !!data.token })
+      console.log('[AuthService] getAuthToken - Token data received:', { hasToken: !!data.token })
 
       if (!data.token) {
         throw new Error('No token in response')
       }
 
+      console.log('[AuthService] getAuthToken - Token retrieved successfully');
       return data.token
     } catch (error: any) {
-      console.error('Error getting auth token:', error)
-      // If it's a redirect error, let it bubble up
+      console.error('[AuthService] getAuthToken - Error:', error);
       if (error.message?.includes('redirecting')) {
         throw error
       }
@@ -147,6 +147,7 @@ export class AuthService {
    * Validate token with backend
    */
   async validateToken(token: string): Promise<{ valid: boolean; user?: User }> {
+    console.log('[AuthService] validateToken - Validating token');
     try {
       const response = await fetch(`${this.apiBaseUrl}/auth/verify`, {
         method: 'GET',
@@ -158,13 +159,15 @@ export class AuthService {
       })
 
       if (!response.ok) {
+        console.log('[AuthService] validateToken - Token invalid');
         return { valid: false }
       }
 
       const data = await response.json()
+      console.log('[AuthService] validateToken - Token valid, user:', data.user?.email);
       return { valid: true, user: data.user }
     } catch (error) {
-      console.error('Error validating token:', error)
+      console.error('[AuthService] validateToken - Error:', error);
       return { valid: false }
     }
   }
@@ -273,6 +276,7 @@ export class AuthService {
    * Clear current user and cache
    */
   clearCurrentUser(): void {
+    console.log('[AuthService] clearCurrentUser - Clearing current user');
     this.currentUser = null
     this.roleCache.clear()
   }
