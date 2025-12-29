@@ -255,51 +255,6 @@ export class AuthService {
     }
   }
 
-      // Create user in Auth0
-      const response = await axios.post(
-        `https://${config.auth0.domain}/api/v2/users`,
-        {
-          email,
-          password,
-          name,
-          phone_number: phone,
-          connection: 'Username-Password-Authentication',
-          email_verified: false,
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${await this.getAuth0ManagementToken()}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      const auth0UserId = response.data.user_id;
-
-      // Create user in database
-      await this.userRepository.create({
-        auth0_id: auth0UserId,
-        email,
-        email_verified: false,
-        name,
-        phone,
-        role: 'customer',
-        permissions: [],
-      });
-
-      // Login the user
-      return this.login(email, password);
-    } catch (error: any) {
-      logger.error('Registration failed', { error: error.message, email });
-      
-      if (error.response?.status === 409) {
-        throw new ConflictError('User with this email already exists');
-      }
-      
-      throw error;
-    }
-  }
-
   async refreshToken(refreshToken: string) {
     try {
       console.log('[AuthService] refreshToken - Refreshing token');

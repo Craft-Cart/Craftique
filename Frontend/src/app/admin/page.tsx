@@ -58,18 +58,6 @@ export default function AdminDashboard() {
         return
       }
 
-  const fetchDashboardStats = async () => {
-    try {
-      // Get token from auth-service which handles HttpOnly cookies properly
-      const { authService } = await import('@/lib/auth-service')
-      const token = await authService['getAuthToken']()
-
-      if (!token) {
-        console.warn('No auth token available')
-        setLoading(false)
-        return
-      }
-
       const [usersResponse, ordersResponse, productsResponse] = await Promise.all([
         fetch(API_ENDPOINTS.users.list, {
           headers: { 'Authorization': `Bearer ${token}` }

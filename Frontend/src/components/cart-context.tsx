@@ -93,9 +93,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     },
     [removeItem],
   )
-    },
-    [removeItem],
-  )
 
   const clearCart = useCallback(() => {
     console.log('[CartContext] clearCart - Clearing cart');

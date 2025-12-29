@@ -46,21 +46,6 @@ export class CatalogService {
     }
   }
 
-    const data = await response.json()
-    // Transform backend response to frontend format
-    // Backend returns: { items, total, page, pages }
-    // Frontend expects: { data, pagination: { page, limit, total, totalPages } }
-    return {
-      data: data.items || [],
-      pagination: {
-        page: data.page || 1,
-        limit: filters?.limit || 10,
-        total: data.total || 0,
-        totalPages: data.pages || 1,
-      },
-    }
-  }
-
   static async getProductById(id: string): Promise<Product> {
     console.log('[CatalogService] getProductById - Fetching product:', id);
     const url = API_ENDPOINTS.items.detail(id)

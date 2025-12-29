@@ -18,7 +18,7 @@ export class InventoryController {
         page: parseInt(page as string),
         limit: parseInt(limit as string),
       });
-      console.log('[InventoryController] getInventoryLogs - Retrieved logs:', logs.length);
+      console.log('[InventoryController] getInventoryLogs - Retrieved logs:', logs.logs?.length || 0);
       res.json(logs);
     } catch (error) {
       console.error('[InventoryController] getInventoryLogs - Error:', error);

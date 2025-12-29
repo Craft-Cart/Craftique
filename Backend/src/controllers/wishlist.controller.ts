@@ -19,7 +19,7 @@ export class WishlistController {
       }
 
       const wishlist = await this.wishlistService.getWishlist(userId);
-      console.log('[WishlistController] getWishlist - Retrieved', wishlist.length, 'wishlist items');
+      console.log('[WishlistController] getWishlist - Retrieved', wishlist.wishlist?.length || 0, 'wishlist items');
       res.json(wishlist);
     } catch (error) {
       console.error('[WishlistController] getWishlist - Error:', error);

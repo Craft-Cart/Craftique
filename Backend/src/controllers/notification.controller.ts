@@ -26,7 +26,7 @@ export class NotificationController {
         limit: parseInt(limit as string),
         unreadOnly: unread_only === 'true',
       });
-      console.log('[NotificationController] getNotifications - Retrieved', notifications.length, 'notifications');
+      console.log('[NotificationController] getNotifications - Retrieved', notifications.notifications?.length || 0, 'notifications');
       res.json(notifications);
     } catch (error) {
       console.error('[NotificationController] getNotifications - Error:', error);
