@@ -161,6 +161,116 @@ rules:
     severity: ERROR
     languages: [typescript, javascript]
 
+  # ============================================
+  # Database Constraints - Negative Quantity Prevention
+  # ============================================
+  - id: missing-quantity-check-constraint-item
+    patterns:
+      - pattern: |
+          CREATE TABLE "Item" (
+            ...
+            "quantity" INTEGER NOT NULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "Item" ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT "Item_quantity_check" CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+    message: "Missing database constraint: Item.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"Item\" ADD CONSTRAINT \"Item_quantity_check\" CHECK (quantity >= 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-orderitem
+    patterns:
+      - pattern: |
+          CREATE TABLE "OrderItem" (
+            ...
+            "quantity" INTEGER NOT NULL,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "OrderItem" ADD CONSTRAINT ... CHECK (quantity > 0)
+      - pattern-not: |
+          CONSTRAINT "OrderItem_quantity_check" CHECK (quantity > 0)
+      - pattern-not: |
+          CHECK (quantity > 0)
+    message: "Missing database constraint: OrderItem.quantity should have CHECK constraint to prevent negative or zero values. Add: ALTER TABLE \"OrderItem\" ADD CONSTRAINT \"OrderItem_quantity_check\" CHECK (quantity > 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-productvariant
+    patterns:
+      - pattern: |
+          CREATE TABLE "ProductVariant" (
+            ...
+            "quantity" INTEGER NOT NULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "ProductVariant" ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT "ProductVariant_quantity_check" CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+    message: "Missing database constraint: ProductVariant.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"ProductVariant\" ADD CONSTRAINT \"ProductVariant_quantity_check\" CHECK (quantity >= 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-generic
+    patterns:
+      - pattern: |
+          CREATE TABLE $TABLE (
+            ...
+            "quantity" INTEGER $NOTNULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT $TABLE_quantity_check CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity > 0)
+      - metavariable-pattern:
+          metavariable: $TABLE
+          pattern-not: InventoryLog
+    message: "Missing database constraint: Table $TABLE has quantity column without CHECK constraint. Add CHECK constraint to prevent negative values (e.g., CHECK (quantity >= 0) or CHECK (quantity > 0) depending on business logic)."
+    severity: WARNING
+    languages: [sql]
+
+  - id: prisma-quantity-field-without-constraint-note
+    patterns:
+      - pattern: |
+          quantity        Int       $DEFAULT
+      - pattern-not-inside: |
+          // CHECK constraint: quantity >= 0
+      - pattern-not-inside: |
+          // CHECK (quantity >= 0)
+      - pattern-not-inside: |
+          // @db.Check("quantity >= 0")
+    message: "Missing CHECK constraint documentation: Quantity field in Prisma schema should have a comment indicating CHECK constraint requirement. Since Prisma doesn't support CHECK constraints directly, add a migration with: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0);"
+    severity: WARNING
+    languages: [prisma]
+
+  - id: missing-quantity-check-in-migration
+    patterns:
+      - pattern: |
+          "quantity" INTEGER $NOTNULL $DEFAULT
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity > 0)
+      - pattern-not: |
+          CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT ... CHECK (quantity > 0)
+    message: "Missing CHECK constraint in migration: Quantity column created without CHECK constraint. Add constraint after table creation: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0); (or quantity > 0 for OrderItem)."
+    severity: ERROR
+    languages: [sql]
+
   - id: insecure-random-math-random
     pattern: Math.random()
     message: "Insecure random number generation: Math.random() is not cryptographically secure. Use crypto.randomBytes() for security tokens, passwords, or any security-sensitive operations."

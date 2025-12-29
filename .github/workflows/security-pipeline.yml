@@ -213,6 +213,10 @@ jobs:
         working-directory: Backend
         run: npm run check-validation
 
+      - name: Check database constraints for quantity fields
+        working-directory: Backend
+        run: npm run check-db-constraints
+
       - name: Generate Prisma Client
         working-directory: Backend
         run: npx prisma generate

@@ -15,7 +15,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "check-validation": "node scripts/check-validation.js"
+    "check-validation": "node scripts/check-validation.js",
+    "check-db-constraints": "node scripts/check-db-constraints.js"
   },
   "keywords": [
     "express",
