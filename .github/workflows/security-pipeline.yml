@@ -42,32 +42,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout code (current PR only)
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 50  # fetch only recent commits
-          ref: ${{ github.head_ref }}  # checkout PR branch
+          fetch-depth: 1
           clean: true
 
-      - name: Determine base commit
-        id: base
-        if: github.event_name == 'pull_request'
+      - name: Run Gitleaks (Secrets Scan)
         run: |
-          echo "BASE_SHA=$(git merge-base HEAD origin/${{ github.event.pull_request.base.ref }})" >> $GITHUB_OUTPUT
-
-      - name: Run Gitleaks (scan only current branch commits)
-        run: |
-          LOG_OPTS=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            LOG_OPTS="^${{ steps.base.outputs.BASE_SHA }}..HEAD"
-          fi
-
           docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect \
             --source="/repo" \
+            --branch="${GITHUB_REF_NAME}" \
+            --since-commit="${{ github.event.pull_request.base.sha }}" \
             --verbose \
             --redact \
-            --exit-code 1 \
-            --log-opts="$LOG_OPTS"
+            --exit-code 1
         continue-on-error: false
 
       - name: Scan Dockerfiles with Hadolint
@@ -573,7 +562,6 @@ jobs:
           name: zap-report
           path: report_html.html
           retention-days: 14
-
 
   # ============================================
   # Stage 6: Security Gate & PR Comment
