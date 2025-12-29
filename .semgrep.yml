@@ -1,7 +1,7 @@
 rules:
   - id: mass-assignment-prisma-update
     patterns:
-      - pattern: $PRISMA.$MODEL.update({ data: $DATA, ... })
+      - pattern:  "$PRISMA.$MODEL.update({ data: $DATA, ... })"
       - metavariable-pattern:
           metavariable: $DATA
           pattern: req.body
