@@ -16,3 +16,9 @@ rules:
     message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
     severity: WARNING
     languages: [typescript, javascript]
+
+  - id: insecure-random-math-random
+    pattern: Math.random()
+    message: "Insecure random number generation: Math.random() is not cryptographically secure. Use crypto.randomBytes() for security tokens, passwords, or any security-sensitive operations."
+    severity: ERROR
+    languages: [typescript, javascript]
