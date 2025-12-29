@@ -450,6 +450,8 @@ jobs:
 
 
     steps:
+      - name: Ensure prisma directory is writable
+        run: chmod -R 777 Backend/prisma || true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
