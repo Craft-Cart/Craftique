@@ -53,7 +53,6 @@ export function AnalyticsDashboard() {
       }
       setData(mockData)
     } catch (error) {
-      console.error('Failed to fetch analytics:', error)
     } finally {
       setLoading(false)
     }

@@ -29,13 +29,16 @@ export function ReviewList({ productId, isModerator = false }: ReviewListProps) 
     fetchReviews()
   }, [productId])
 
+  const getAuthToken = () => {
+    return localStorage.getItem('auth0_access_token') || ''
+  }
+
   const fetchReviews = async () => {
     try {
       const response = await fetch(API_ENDPOINTS.reviews.byItem(productId))
       const data = await response.json()
       setReviews(data.reviews || [])
     } catch (error) {
-      console.error('Failed to fetch reviews:', error)
     } finally {
       setLoading(false)
     }
@@ -51,14 +54,13 @@ export function ReviewList({ productId, isModerator = false }: ReviewListProps) 
         },
         body: JSON.stringify(newReview),
       })
-      
+
       if (response.ok) {
         setIsReviewDialogOpen(false)
         setNewReview({ rating: 5, title: '', comment: '' })
         fetchReviews()
       }
     } catch (error) {
-      console.error('Failed to submit review:', error)
     }
   }
 
@@ -68,12 +70,11 @@ export function ReviewList({ productId, isModerator = false }: ReviewListProps) 
         method: 'POST',
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
-      
+
       if (response.ok) {
         fetchReviews()
       }
     } catch (error) {
-      console.error('Failed to approve review:', error)
     }
   }
 
@@ -83,17 +84,12 @@ export function ReviewList({ productId, isModerator = false }: ReviewListProps) 
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
-      
+
       if (response.ok) {
         fetchReviews()
       }
     } catch (error) {
-      console.error('Failed to delete review:', error)
     }
-  }
-
-  const getAuthToken = () => {
-    return localStorage.getItem('auth0_access_token') || ''
   }
 
   const formatDate = (dateString: string) => {

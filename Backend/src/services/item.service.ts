@@ -13,13 +13,10 @@ export class ItemService {
   }
 
   async getItemById(id: string) {
-    console.log('[ItemService] getItemById - Fetching item:', id);
     const item = await this.itemRepository.findById(id);
     if (!item) {
-      console.log('[ItemService] getItemById - Item not found');
       throw new NotFoundError('Item');
     }
-    console.log('[ItemService] getItemById - Item retrieved:', item.name);
     return item;
   }
 
@@ -32,9 +29,7 @@ export class ItemService {
     search?: string;
     sortBy?: string;
   }) {
-    console.log('[ItemService] getItems - Fetching items with options:', options);
     const result = await this.itemRepository.findMany(options);
-    console.log('[ItemService] getItems - Retrieved', result.items?.length || 0, 'items');
     return {
       items: result.items,
       total: result.total,
@@ -60,17 +55,14 @@ export class ItemService {
     dimensions?: any;
     metadata?: any;
   }) {
-    console.log('[ItemService] createItem - Creating item:', data.name);
     const category = await this.categoryRepository.findById(data.categoryId);
     if (!category) {
-      console.log('[ItemService] createItem - Category not found');
       throw new NotFoundError('Category');
     }
 
     if (data.sku) {
       const existing = await this.itemRepository.findBySku(data.sku);
       if (existing) {
-        console.log('[ItemService] createItem - SKU already exists');
         throw new ConflictError('Item with this SKU already exists');
       }
     }
@@ -78,7 +70,6 @@ export class ItemService {
     const slug = slugify(data.name);
     const existingSlug = await this.itemRepository.findBySlug(slug);
     if (existingSlug) {
-      console.log('[ItemService] createItem - Item with this name already exists');
       throw new ConflictError('Item with this name already exists');
     }
 
@@ -102,7 +93,6 @@ export class ItemService {
       dimensions: data.dimensions,
       metadata: data.metadata,
     });
-    console.log('[ItemService] createItem - Item created');
     return item;
   }
 

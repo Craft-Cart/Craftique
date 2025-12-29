@@ -11,9 +11,7 @@ import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 
 export default function CartPage() {
-  console.log('[Page: Cart] Component mounting');
   const { items, updateQuantity, removeItem } = useCart();
-  console.log('[Page: Cart] Cart items:', items.length);
 
   if (items.length === 0) {
     return (

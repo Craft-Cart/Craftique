@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { config } from '../config/env';
 
 export const setAuthCookie = (res: Response, token: string, refreshToken?: string) => {
-  console.log('[CookieMiddleware] setAuthCookie - Setting auth cookies');
   res.cookie('access_token', token, {
     httpOnly: true,
     secure: config.cookie.secure,
@@ -22,11 +21,9 @@ export const setAuthCookie = (res: Response, token: string, refreshToken?: strin
       path: '/',
     });
   }
-  console.log('[CookieMiddleware] setAuthCookie - Cookies set successfully');
 };
 
 export const clearAuthCookies = (res: Response) => {
-  console.log('[CookieMiddleware] clearAuthCookies - Clearing auth cookies');
   res.clearCookie('access_token', {
     domain: config.cookie.domain,
     path: '/',
@@ -35,6 +32,5 @@ export const clearAuthCookies = (res: Response) => {
     domain: config.cookie.domain,
     path: '/',
   });
-  console.log('[CookieMiddleware] clearAuthCookies - Cookies cleared successfully');
 };
 

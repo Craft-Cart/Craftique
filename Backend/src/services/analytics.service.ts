@@ -2,7 +2,6 @@ import { prisma } from '../config/database';
 
 export class AnalyticsService {
   async getDashboard(period: string = 'monthly', dateFrom?: string, dateTo?: string) {
-    console.log('[AnalyticsService] getDashboard - Fetching dashboard data for period:', period);
     const dateFilter = this.getDateFilter(period, dateFrom, dateTo);
 
     const [totalRevenue, totalOrders, totalCustomers, averageOrderValue] = await Promise.all([
@@ -23,12 +22,10 @@ export class AnalyticsService {
       top_products: await this.getTopProducts(dateFilter),
       revenue_by_category: await this.getRevenueByCategory(dateFilter),
     };
-    console.log('[AnalyticsService] getDashboard - Dashboard data retrieved');
     return result;
   }
 
   async getRevenue(period: string, dateFrom?: string, dateTo?: string) {
-    console.log('[AnalyticsService] getRevenue - Fetching revenue data for period:', period);
     const dateFilter = this.getDateFilter(period, dateFrom, dateTo);
     const totalRevenue = await this.getTotalRevenue(dateFilter);
     const revenueByPeriod = await this.getRevenueByPeriod(period, dateFilter);
@@ -37,12 +34,10 @@ export class AnalyticsService {
       total_revenue: totalRevenue,
       revenue_by_period: revenueByPeriod,
     };
-    console.log('[AnalyticsService] getRevenue - Revenue data retrieved');
     return result;
   }
 
   async getProductAnalytics() {
-    console.log('[AnalyticsService] getProductAnalytics - Fetching product analytics');
     const [topSelling, lowStock] = await Promise.all([
       this.getTopSellingProducts(),
       this.getLowStockProducts(),
@@ -52,12 +47,10 @@ export class AnalyticsService {
       top_selling: topSelling,
       low_stock: lowStock,
     };
-    console.log('[AnalyticsService] getProductAnalytics - Product analytics retrieved');
     return result;
   }
 
   async getCustomerAnalytics() {
-    console.log('[AnalyticsService] getCustomerAnalytics - Fetching customer analytics');
     const [totalCustomers, newCustomers, repeatCustomers, customerLifetimeValue] = await Promise.all([
       prisma.user.count({ where: { role: 'customer' } }),
       this.getNewCustomers(),
@@ -71,12 +64,10 @@ export class AnalyticsService {
       repeat_customers: repeatCustomers,
       customer_lifetime_value: customerLifetimeValue,
     };
-    console.log('[AnalyticsService] getCustomerAnalytics - Customer analytics retrieved');
     return result;
   }
 
   async exportData(reportType: string, _format: string, dateFrom?: string, dateTo?: string) {
-    console.log('[AnalyticsService] exportData - Exporting report type:', reportType);
     const dateFilter = this.getDateFilter('monthly', dateFrom, dateTo);
 
     let data: any;
@@ -97,7 +88,6 @@ export class AnalyticsService {
         throw new Error('Invalid report type');
     }
 
-    console.log('[AnalyticsService] exportData - Data exported successfully');
     return JSON.stringify(data, null, 2);
   }
 

@@ -22,7 +22,6 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  console.log('[Page: Admin] Component mounting');
   const {
     loading: rbacLoading,
     canAccessAdmin,
@@ -47,13 +46,11 @@ export default function AdminDashboard() {
   }, [])
 
   const fetchDashboardStats = async () => {
-    console.log('[Page: Admin] Fetching dashboard stats');
     try {
       const { authService } = await import('@/lib/auth-service')
       const token = await authService['getAuthToken']()
 
       if (!token) {
-        console.warn('[Page: Admin] No auth token available')
         setLoading(false)
         return
       }
@@ -74,7 +71,6 @@ export default function AdminDashboard() {
       const ordersData = await ordersResponse.json()
       const productsData = await productsResponse.json()
 
-      console.log('[Page: Admin] Stats fetched:', { users: usersData.total, orders: ordersData.total, products: productsData.total });
 
       setStats({
         totalUsers: usersData.total || 0,
@@ -83,7 +79,6 @@ export default function AdminDashboard() {
         totalProducts: productsData.total || 0,
       })
     } catch (error) {
-      console.error('[Page: Admin] Failed to fetch dashboard stats:', error)
     } finally {
       setLoading(false)
     }

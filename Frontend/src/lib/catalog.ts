@@ -10,7 +10,6 @@ export class CatalogService {
   }
 
   static async getProducts(filters?: ProductFilters): Promise<PaginatedResponse<Product>> {
-    console.log('[CatalogService] getProducts - Fetching products with filters:', filters);
     const params = new URLSearchParams()
 
     if (filters?.page) params.append("page", filters.page.toString())
@@ -29,12 +28,10 @@ export class CatalogService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch products" }))
-      console.error('[CatalogService] getProducts - Error:', error);
       throw new Error(error.message || "Failed to fetch products")
     }
 
     const data = await response.json()
-    console.log('[CatalogService] getProducts - Products retrieved:', data.items?.length, 'of', data.total);
     return {
       data: data.items || [],
       pagination: {
@@ -47,7 +44,6 @@ export class CatalogService {
   }
 
   static async getProductById(id: string): Promise<Product> {
-    console.log('[CatalogService] getProductById - Fetching product:', id);
     const url = API_ENDPOINTS.items.detail(id)
     const response = await fetch(url, {
       method: "GET",
@@ -58,17 +54,14 @@ export class CatalogService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch product" }))
-      console.error('[CatalogService] getProductById - Error:', error);
       throw new Error(error.message || "Failed to fetch product")
     }
 
     const item = await response.json()
-    console.log('[CatalogService] getProductById - Product retrieved:', item.name);
     return item as Product
   }
 
   static async getCategories(): Promise<Category[]> {
-    console.log('[CatalogService] getCategories - Fetching categories');
     const url = API_ENDPOINTS.categories.list
     const response = await fetch(url, {
       method: "GET",
@@ -79,12 +72,10 @@ export class CatalogService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch categories" }))
-      console.error('[CatalogService] getCategories - Error:', error);
       throw new Error(error.message || "Failed to fetch categories")
     }
 
     const categories = await response.json()
-    console.log('[CatalogService] getCategories - Categories retrieved:', categories.length);
     return categories
   }
 }

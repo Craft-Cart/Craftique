@@ -27,7 +27,6 @@ export function OrderManagement() {
       const data = await response.json()
       setOrders(data.orders || [])
     } catch (error) {
-      console.error('Failed to fetch orders:', error)
     } finally {
       setLoading(false)
     }
@@ -49,7 +48,6 @@ export function OrderManagement() {
         fetchOrders()
       }
     } catch (error) {
-      console.error('Failed to update order status:', error)
     }
   }
 

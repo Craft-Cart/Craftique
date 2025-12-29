@@ -44,7 +44,6 @@ export function ProductManagement() {
       const data = await response.json()
       setProducts(data.items || [])
     } catch (error) {
-      console.error('Failed to fetch products:', error)
     } finally {
       setLoading(false)
     }
@@ -56,7 +55,6 @@ export function ProductManagement() {
       const data = await response.json()
       setCategories(data || [])
     } catch (error) {
-      console.error('Failed to fetch categories:', error)
     }
   }
 
@@ -90,7 +88,6 @@ export function ProductManagement() {
         fetchProducts()
       }
     } catch (error) {
-      console.error('Failed to create product:', error)
     }
   }
 
@@ -110,7 +107,6 @@ export function ProductManagement() {
         fetchProducts()
       }
     } catch (error) {
-      console.error('Failed to update product status:', error)
     }
   }
 

@@ -41,7 +41,6 @@ export function CategoryManagement() {
       const data = await response.json()
       setCategories(data || [])
     } catch (error) {
-      console.error('Failed to fetch categories:', error)
     } finally {
       setLoading(false)
     }
@@ -69,7 +68,6 @@ export function CategoryManagement() {
         fetchCategories()
       }
     } catch (error) {
-      console.error('Failed to create category:', error)
     }
   }
 
@@ -99,7 +97,6 @@ export function CategoryManagement() {
         fetchCategories()
       }
     } catch (error) {
-      console.error('Failed to update category:', error)
     }
   }
 
@@ -121,7 +118,6 @@ export function CategoryManagement() {
         fetchCategories()
       }
     } catch (error) {
-      console.error('Failed to delete category:', error)
     }
   }
 

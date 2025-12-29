@@ -36,7 +36,6 @@ export function UserManagement() {
       const data = await response.json()
       setUsers(data.users || [])
     } catch (error) {
-      console.error('Failed to fetch users:', error)
     } finally {
       setLoading(false)
     }
@@ -60,7 +59,6 @@ export function UserManagement() {
         fetchUsers()
       }
     } catch (error) {
-      console.error('Failed to create user:', error)
     }
   }
 
@@ -80,7 +78,6 @@ export function UserManagement() {
         fetchUsers()
       }
     } catch (error) {
-      console.error('Failed to update user role:', error)
     }
   }
 

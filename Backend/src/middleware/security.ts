@@ -5,7 +5,6 @@ import { Express } from 'express';
 import { config } from '../config/env';
 
 export const setupSecurityMiddleware = (app: Express) => {
-  console.log('[SecurityMiddleware] setupSecurityMiddleware - Setting up security middleware');
   app.use(helmet({
     contentSecurityPolicy: {
       directives: {
@@ -47,6 +46,5 @@ export const setupSecurityMiddleware = (app: Express) => {
   app.use('/api/v1/auth/login', authLimiter);
   app.use('/api/v1/auth/register', authLimiter);
   app.use('/api/v1/auth/password/forgot', authLimiter);
-  console.log('[SecurityMiddleware] setupSecurityMiddleware - Security middleware configured');
 };
 
