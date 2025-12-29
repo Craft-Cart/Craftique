@@ -37,7 +37,7 @@ export function useRBAC() {
 
         // Fallback: Use Auth0 user data if backend sync fails
         // This ensures the UI still works even if backend is unavailable
-        const metadataRole = auth0User['https://yourstore.com/role'] as UserRole;
+        const metadataRole = auth0User['https://craftique-api/roles'] as UserRole;
         let userRole: UserRole = UserRole.customer;
         
         if (metadataRole && Object.values(UserRole).includes(metadataRole)) {
@@ -51,7 +51,7 @@ export function useRBAC() {
           email_verified: auth0User.email_verified || false,
           name: auth0User.name || '',
           role: userRole,
-          permissions: auth0User['https://yourstore.com/permissions'] as string[] || [],
+          permissions: auth0User['https://craftique-api/permissions'] as string[] || [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
