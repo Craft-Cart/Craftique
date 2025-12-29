@@ -2,30 +2,31 @@ import { Response } from 'express';
 import { config } from '../config/env';
 
 export const setAuthCookie = (res: Response, token: string, refreshToken?: string) => {
-  // Set access token in HttpOnly cookie
+  console.log('[CookieMiddleware] setAuthCookie - Setting auth cookies');
   res.cookie('access_token', token, {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: config.cookie.sameSite,
     domain: config.cookie.domain,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 24 * 60 * 60 * 1000,
     path: '/',
   });
 
-  // Set refresh token if provided
   if (refreshToken) {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
       secure: config.cookie.secure,
       sameSite: config.cookie.sameSite,
       domain: config.cookie.domain,
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/',
     });
   }
+  console.log('[CookieMiddleware] setAuthCookie - Cookies set successfully');
 };
 
 export const clearAuthCookies = (res: Response) => {
+  console.log('[CookieMiddleware] clearAuthCookies - Clearing auth cookies');
   res.clearCookie('access_token', {
     domain: config.cookie.domain,
     path: '/',
@@ -34,5 +35,6 @@ export const clearAuthCookies = (res: Response) => {
     domain: config.cookie.domain,
     path: '/',
   });
+  console.log('[CookieMiddleware] clearAuthCookies - Cookies cleared successfully');
 };
 

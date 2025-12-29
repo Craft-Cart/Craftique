@@ -17,16 +17,19 @@ export class OrderService {
   }
 
   async getOrderById(id: string, userId?: string) {
+    console.log('[OrderService] getOrderById - Fetching order:', id);
     const order = await this.orderRepository.findById(id);
     if (!order) {
+      console.log('[OrderService] getOrderById - Order not found');
       throw new NotFoundError('Order');
     }
 
-    // Check ownership
     if (userId && order.user_id !== userId) {
+      console.log('[OrderService] getOrderById - Access denied');
       throw new ValidationError('Access denied');
     }
 
+    console.log('[OrderService] getOrderById - Order retrieved');
     return order;
   }
 
@@ -36,10 +39,13 @@ export class OrderService {
     userId?: string;
     status?: string;
   }) {
-    return this.orderRepository.findMany({
+    console.log('[OrderService] getOrders - Fetching orders with options:', options);
+    const result = this.orderRepository.findMany({
       ...options,
-      status: options.status as any, // Type assertion for OrderStatus enum
+      status: options.status as any,
     });
+    console.log('[OrderService] getOrders - Orders retrieved');
+    return result;
   }
 
   async createOrder(userId: string, data: {
@@ -48,15 +54,15 @@ export class OrderService {
     billingAddress?: any;
     notes?: string;
   }) {
-    // Validate all items exist and are available
+    console.log('[OrderService] createOrder - Creating order for user:', userId, 'with', data.items.length, 'items');
     const itemIds = data.items.map(item => item.itemId);
     const items = await this.itemRepository.findByIds(itemIds);
 
     if (items.length !== data.items.length) {
+      console.log('[OrderService] createOrder - One or more items not found');
       throw new ValidationError('One or more items not found');
     }
 
-    // Calculate totals (server-side calculation - never trust client)
     let subtotal = new Decimal(0);
     const orderItems: any[] = [];
 
@@ -66,12 +72,13 @@ export class OrderService {
         throw new ValidationError(`Item ${orderItem.itemId} not found`);
       }
 
-      // Check availability
       if (item.quantity < orderItem.quantity) {
+        console.log('[OrderService] createOrder - Insufficient quantity for item:', item.name);
         throw new ValidationError(`Insufficient quantity for item ${item.name}`);
       }
 
       if (!item.is_active) {
+        console.log('[OrderService] createOrder - Item not available:', item.name);
         throw new ValidationError(`Item ${item.name} is not available`);
       }
 
@@ -87,16 +94,13 @@ export class OrderService {
       });
     }
 
-    // Calculate shipping and tax (simplified)
-    const shipping = new Decimal(50); // Fixed shipping cost
-    const tax = subtotal.mul(0.14); // 14% tax
+    const shipping = new Decimal(50);
+    const tax = subtotal.mul(0.14);
     const discount = new Decimal(0);
     const total = subtotal.add(shipping).add(tax).sub(discount);
 
-    // Reserve items (decrement quantity)
     await this.itemService.reserveItems(data.items);
 
-    // Create order
     const orderNumber = generateOrderNumber();
     
     const order = await this.orderRepository.create({

@@ -10,6 +10,7 @@ export class CatalogService {
   }
 
   static async getProducts(filters?: ProductFilters): Promise<PaginatedResponse<Product>> {
+    console.log('[CatalogService] getProducts - Fetching products with filters:', filters);
     const params = new URLSearchParams()
 
     if (filters?.page) params.append("page", filters.page.toString())
@@ -22,23 +23,22 @@ export class CatalogService {
     const response = await fetch(url, {
       method: "GET",
       headers: this.getAuthHeaders(),
-      credentials: "include", // Include cookies for authentication
+      credentials: "include",
       cache: "no-store",
     })
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch products" }))
+      console.error('[CatalogService] getProducts - Error:', error);
       throw new Error(error.message || "Failed to fetch products")
     }
 
     const data = await response.json()
-    // Transform backend response to frontend format
-    // Backend returns: { items, total, page, pages }
-    // Frontend expects: { data, pagination: { page, limit, total, totalPages } }
+    console.log('[CatalogService] getProducts - Products retrieved:', data.items?.length, 'of', data.total);
     return {
       data: data.items || [],
       pagination: {
-        page: data.page || 1,
+        page: data.page ||1,
         limit: filters?.limit || 10,
         total: data.total || 0,
         totalPages: data.pages || 1,
@@ -47,6 +47,7 @@ export class CatalogService {
   }
 
   static async getProductById(id: string): Promise<Product> {
+    console.log('[CatalogService] getProductById - Fetching product:', id);
     const url = API_ENDPOINTS.items.detail(id)
     const response = await fetch(url, {
       method: "GET",
@@ -57,15 +58,17 @@ export class CatalogService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch product" }))
+      console.error('[CatalogService] getProductById - Error:', error);
       throw new Error(error.message || "Failed to fetch product")
     }
 
     const item = await response.json()
-    // Transform item to product format if needed
+    console.log('[CatalogService] getProductById - Product retrieved:', item.name);
     return item as Product
   }
 
   static async getCategories(): Promise<Category[]> {
+    console.log('[CatalogService] getCategories - Fetching categories');
     const url = API_ENDPOINTS.categories.list
     const response = await fetch(url, {
       method: "GET",
@@ -76,9 +79,12 @@ export class CatalogService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: "Failed to fetch categories" }))
+      console.error('[CatalogService] getCategories - Error:', error);
       throw new Error(error.message || "Failed to fetch categories")
     }
 
-    return response.json()
+    const categories = await response.json()
+    console.log('[CatalogService] getCategories - Categories retrieved:', categories.length);
+    return categories
   }
 }
