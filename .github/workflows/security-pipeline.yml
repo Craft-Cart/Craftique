@@ -76,7 +76,7 @@ jobs:
       - name: Run Semgrep SAST
         uses: semgrep/semgrep-action@v1
         with:
-          config: p/security-audit p/owasp-top-ten p/nodejs p/typescript
+          config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
