@@ -3,6 +3,8 @@ import { ManagementClient } from 'auth0';
 import { config } from '../config/env';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import jwt from 'jsonwebtoken';
+import jwksClient from 'jwks-rsa';
 
 // Extend Express Request to include user
 declare global {
@@ -25,6 +27,25 @@ const managementClient = new ManagementClient({
   clientId: config.auth0.clientId,
   clientSecret: config.auth0.clientSecret,
 });
+
+// JWKS client for verifying JWT signatures
+const jwks = jwksClient({
+  jwksUri: `https://${config.auth0.domain}/.well-known/jwks.json`,
+  cache: true,
+  rateLimit: true,
+});
+
+// Function to get signing key
+const getKey = (header: any, callback: (err: Error | null, key?: string) => void) => {
+  jwks.getSigningKey(header.kid, (err, key) => {
+    if (err) {
+      callback(err);
+    } else {
+      const signingKey = key!.getPublicKey();
+      callback(null, signingKey);
+    }
+  });
+};
 
 // Auth0 Next.js SDK cookie names (from SDK documentation)
 const AUTH0_SESSION_COOKIE = 'appSession';
@@ -133,37 +154,32 @@ const extractToken = (req: Request): string | null => {
   return null;
 };
 
-// Verify JWT token with basic validation
-const verifyToken = (token: string): any => {
-  try {
-    // For now, decode without JWKS verification (temporary)
-    // TODO: Implement proper JWKS verification with Auth0 SDK
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
-
-    // Decode payload
-    const payload = JSON.parse(
-      Buffer.from(parts[1], 'base64').toString()
+// Verify JWT token with proper validation
+const verifyToken = async (token: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    jwt.verify(
+      token,
+      getKey,
+      {
+        algorithms: ['RS256'],
+        issuer: `https://${config.auth0.domain}/`,
+        audience: config.auth0.audience,
+      },
+      (err, decoded) => {
+        if (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          const errorStack = err instanceof Error ? err.stack : undefined;
+          logger.error('Token verification failed', {
+            error: errorMessage,
+            stack: errorStack,
+          });
+          reject(err);
+        } else {
+          resolve(decoded);
+        }
+      }
     );
-
-    // Check token expiration
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      throw new Error('Token has expired');
-    }
-
-    return payload;
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    logger.error('Token verification failed', {
-      error: errorMessage,
-      stack: errorStack,
-    });
-    throw error;
-  }
+  });
 };
 
 // Middleware to verify JWT token
@@ -176,7 +192,7 @@ export const verifyJWT = async (req: Request, _res: Response, next: NextFunction
     }
 
     // Verify and decode token
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
 
     // Log decoded token info for debugging
     logger.info('Authentication successful', {

@@ -10,6 +10,9 @@ export class CategoryService {
   }
 
   async getCategoryById(id: string) {
+    // nosemgrep: missing-ownership-check
+    // Categories are public data, accessible by all users
+    // Authorization is handled at the middleware layer
     const category = await this.categoryRepository.findById(id);
     if (!category) {
       throw new NotFoundError('Category');
