@@ -17,11 +17,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create a response object for getAccessToken (required by Auth0 SDK)
     const response = new NextResponse();
 
-    // Get access token from Auth0 session
-    // getAccessToken requires both req and res in App Router
     const tokenData = await auth0.getAccessToken(request, response);
 
     if (!tokenData || !tokenData.token) {
@@ -36,7 +33,6 @@ export async function GET(request: NextRequest) {
       expiresAt: session.expiresAt
     });
   } catch (error: any) {
-    // Handle Auth0 AccessTokenError - redirect to logout
     if (error?.code === 'missing_refresh_token' ||
         error?.code === 'invalid_grant' ||
         error?.message?.includes('access token has expired')) {
@@ -44,11 +40,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/logout', request.url));
     }
 
-    console.error('Error getting access token:', error);
     return NextResponse.json(
       { error: 'Failed to get access token', details: error.message },
       { status: 500 }
     );
   }
 }
-

@@ -23,7 +23,6 @@ export class NotificationController {
         limit: parseInt(limit as string),
         unreadOnly: unread_only === 'true',
       });
-
       res.json(notifications);
     } catch (error) {
       next(error);

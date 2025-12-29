@@ -22,7 +22,7 @@ export class CatalogService {
     const response = await fetch(url, {
       method: "GET",
       headers: this.getAuthHeaders(),
-      credentials: "include", // Include cookies for authentication
+      credentials: "include",
       cache: "no-store",
     })
 
@@ -32,13 +32,10 @@ export class CatalogService {
     }
 
     const data = await response.json()
-    // Transform backend response to frontend format
-    // Backend returns: { items, total, page, pages }
-    // Frontend expects: { data, pagination: { page, limit, total, totalPages } }
     return {
       data: data.items || [],
       pagination: {
-        page: data.page || 1,
+        page: data.page ||1,
         limit: filters?.limit || 10,
         total: data.total || 0,
         totalPages: data.pages || 1,
@@ -61,7 +58,6 @@ export class CatalogService {
     }
 
     const item = await response.json()
-    // Transform item to product format if needed
     return item as Product
   }
 
@@ -79,6 +75,7 @@ export class CatalogService {
       throw new Error(error.message || "Failed to fetch categories")
     }
 
-    return response.json()
+    const categories = await response.json()
+    return categories
   }
 }

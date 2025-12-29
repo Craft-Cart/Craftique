@@ -55,13 +55,11 @@ export class ItemService {
     dimensions?: any;
     metadata?: any;
   }) {
-    // Validate category exists
     const category = await this.categoryRepository.findById(data.categoryId);
     if (!category) {
       throw new NotFoundError('Category');
     }
 
-    // Check SKU uniqueness if provided
     if (data.sku) {
       const existing = await this.itemRepository.findBySku(data.sku);
       if (existing) {
@@ -69,14 +67,13 @@ export class ItemService {
       }
     }
 
-    // Generate slug
     const slug = slugify(data.name);
     const existingSlug = await this.itemRepository.findBySlug(slug);
     if (existingSlug) {
       throw new ConflictError('Item with this name already exists');
     }
 
-    return this.itemRepository.create({
+    const item = this.itemRepository.create({
       name: data.name,
       slug,
       description: data.description,
@@ -96,6 +93,7 @@ export class ItemService {
       dimensions: data.dimensions,
       metadata: data.metadata,
     });
+    return item;
   }
 
   async updateItem(id: string, data: {

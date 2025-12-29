@@ -31,7 +31,6 @@ export class ReviewController {
       const { item_id } = req.params;
       const { rating, title, comment, images } = req.body;
 
-      // Get internal user ID
       const { UserService } = require('../services/user.service');
       const userService = new UserService();
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
@@ -57,7 +56,6 @@ export class ReviewController {
       const { review_id } = req.params;
       const { rating, title, comment } = req.body;
 
-      // Get internal user ID
       const { UserService } = require('../services/user.service');
       const userService = new UserService();
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
@@ -81,7 +79,6 @@ export class ReviewController {
 
       const { review_id } = req.params;
 
-      // Get internal user ID
       const { UserService } = require('../services/user.service');
       const userService = new UserService();
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);

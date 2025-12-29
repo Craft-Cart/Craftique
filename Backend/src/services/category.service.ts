@@ -21,7 +21,8 @@ export class CategoryService {
     parentId?: string | null;
     isActive?: boolean;
   }) {
-    return this.categoryRepository.findMany(options);
+    const categories = this.categoryRepository.findMany(options);
+    return categories;
   }
 
   async createCategory(data: {
@@ -30,16 +31,13 @@ export class CategoryService {
     parentId?: string | null;
     imageUrl?: string;
   }) {
-    // Generate slug from name
     const slug = slugify(data.name);
-    
-    // Check if slug exists
+
     const existing = await this.categoryRepository.findBySlug(slug);
     if (existing) {
       throw new ConflictError('Category with this name already exists');
     }
 
-    // Validate parent if provided
     if (data.parentId) {
       const parent = await this.categoryRepository.findById(data.parentId);
       if (!parent) {
@@ -47,7 +45,7 @@ export class CategoryService {
       }
     }
 
-    return this.categoryRepository.create({
+    const category = this.categoryRepository.create({
       name: data.name,
       slug,
       description: data.description,
@@ -55,6 +53,7 @@ export class CategoryService {
       image_url: data.imageUrl,
       is_active: true,
     });
+    return category;
   }
 
   async updateCategory(id: string, data: {
@@ -67,7 +66,6 @@ export class CategoryService {
       throw new NotFoundError('Category');
     }
 
-    // If name changes, update slug
     const updateData: any = {
       description: data.description,
       is_active: data.isActive,
@@ -83,7 +81,8 @@ export class CategoryService {
       updateData.slug = slug;
     }
 
-    return this.categoryRepository.update(id, updateData);
+    const updatedCategory = this.categoryRepository.update(id, updateData);
+    return updatedCategory;
   }
 
   async deleteCategory(id: string) {
@@ -92,7 +91,6 @@ export class CategoryService {
       throw new NotFoundError('Category');
     }
 
-    // Check if category has children
     const children = await this.categoryRepository.findMany({ parentId: id });
     if (children.length > 0) {
       throw new ConflictError('Cannot delete category with subcategories');

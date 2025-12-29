@@ -14,19 +14,21 @@ export default function WishlistPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
+  const getAuthToken = () => {
+    return localStorage.getItem('auth0_access_token') || ''
+  }
+
   useEffect(() => {
     fetchWishlist()
   }, [])
 
   const fetchWishlist = async () => {
     try {
-      // In a real implementation, this would call the wishlist API
       const mockResponse = await fetch('/api/wishlist')
       const data = await mockResponse.json()
       setWishlist(data.wishlist || [])
       setProducts(data.products || [])
     } catch (error) {
-      console.error('Failed to fetch wishlist:', error)
     } finally {
       setLoading(false)
     }
@@ -42,27 +44,11 @@ export default function WishlistPage() {
         },
         body: JSON.stringify({ item_id: productId }),
       })
-      
-      if (response.ok) {
-        fetchWishlist()
-      }
-    } catch (error) {
-      console.error('Failed to add to wishlist:', error)
-    }
-  }
 
-  const removeFromWishlist = async (wishlistId: string) => {
-    try {
-      const response = await fetch(`/api/wishlist/${wishlistId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
-      })
-      
       if (response.ok) {
         fetchWishlist()
       }
     } catch (error) {
-      console.error('Failed to remove from wishlist:', error)
     }
   }
 
@@ -79,18 +65,25 @@ export default function WishlistPage() {
           quantity: 1,
         }),
       })
-      
+
       if (response.ok) {
-        // Show success message
-        console.log('Added to cart')
       }
     } catch (error) {
-      console.error('Failed to add to cart:', error)
     }
   }
 
-  const getAuthToken = () => {
-    return localStorage.getItem('auth0_access_token') || ''
+  const removeFromWishlist = async (wishlistId: string) => {
+    try {
+      const response = await fetch(`/api/wishlist/${wishlistId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      })
+
+      if (response.ok) {
+        fetchWishlist()
+      }
+    } catch (error) {
+    }
   }
 
   const formatCurrency = (amount: number) => {

@@ -38,7 +38,6 @@ export class UserController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Get internal user ID from auth0_id
       const user = await this.userService.getUserByAuth0Id(req.user.auth0_id);
       return res.json(user);
     } catch (error) {
@@ -67,7 +66,6 @@ export class UserController {
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
-      // Get internal user ID
       const internalUser = await this.userService.getUserByAuth0Id(req.user.auth0_id);
       const { name, phone, address } = req.body;
       const user = await this.userService.updateUser(internalUser.id, {
@@ -134,7 +132,6 @@ export class UserController {
   updateModerator = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { moderator_id } = req.params;
-      // Update permissions logic would go here
       const user = await this.userService.getUserById(moderator_id);
       return res.json(user);
     } catch (error) {
@@ -145,7 +142,6 @@ export class UserController {
   deleteModerator = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { moderator_id } = req.params;
-      // Change role to customer instead of deleting
       await this.userService.updateUserAdmin(moderator_id, { role: 'customer' });
       res.status(204).send();
     } catch (error) {
@@ -179,7 +175,6 @@ export class UserController {
   deleteAdmin = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { admin_id } = req.params;
-      // Change role to customer instead of deleting
       await this.userService.updateUserAdmin(admin_id, { role: 'customer' });
       res.status(204).send();
     } catch (error) {

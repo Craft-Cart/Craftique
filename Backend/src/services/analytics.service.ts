@@ -11,7 +11,7 @@ export class AnalyticsService {
       this.getAverageOrderValue(dateFilter),
     ]);
 
-    return {
+    const result = {
       period,
       date_from: dateFilter.from,
       date_to: dateFilter.to,
@@ -22,6 +22,7 @@ export class AnalyticsService {
       top_products: await this.getTopProducts(dateFilter),
       revenue_by_category: await this.getRevenueByCategory(dateFilter),
     };
+    return result;
   }
 
   async getRevenue(period: string, dateFrom?: string, dateTo?: string) {
@@ -29,10 +30,11 @@ export class AnalyticsService {
     const totalRevenue = await this.getTotalRevenue(dateFilter);
     const revenueByPeriod = await this.getRevenueByPeriod(period, dateFilter);
 
-    return {
+    const result = {
       total_revenue: totalRevenue,
       revenue_by_period: revenueByPeriod,
     };
+    return result;
   }
 
   async getProductAnalytics() {
@@ -41,10 +43,11 @@ export class AnalyticsService {
       this.getLowStockProducts(),
     ]);
 
-    return {
+    const result = {
       top_selling: topSelling,
       low_stock: lowStock,
     };
+    return result;
   }
 
   async getCustomerAnalytics() {
@@ -55,16 +58,16 @@ export class AnalyticsService {
       this.getCustomerLifetimeValue(),
     ]);
 
-    return {
+    const result = {
       total_customers: totalCustomers,
       new_customers: newCustomers,
       repeat_customers: repeatCustomers,
       customer_lifetime_value: customerLifetimeValue,
     };
+    return result;
   }
 
   async exportData(reportType: string, _format: string, dateFrom?: string, dateTo?: string) {
-    // This is a simplified version - in production, you'd use libraries like exceljs, pdfkit, etc.
     const dateFilter = this.getDateFilter('monthly', dateFrom, dateTo);
 
     let data: any;
@@ -85,7 +88,6 @@ export class AnalyticsService {
         throw new Error('Invalid report type');
     }
 
-    // In production, convert to requested format (CSV, XLSX, PDF)
     return JSON.stringify(data, null, 2);
   }
 

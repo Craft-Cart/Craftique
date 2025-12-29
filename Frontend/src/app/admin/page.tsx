@@ -22,17 +22,17 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
-  const { 
-    loading: rbacLoading, 
-    canAccessAdmin, 
-    canManageUsers, 
+  const {
+    loading: rbacLoading,
+    canAccessAdmin,
+    canManageUsers,
     canManageItems,
     canManageCategories,
     canAccessAnalytics,
     isAdmin,
     isModerator
   } = useRBAC()
-  
+
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -47,17 +47,14 @@ export default function AdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      // Get token from auth-service which handles HttpOnly cookies properly
       const { authService } = await import('@/lib/auth-service')
       const token = await authService['getAuthToken']()
 
       if (!token) {
-        console.warn('No auth token available')
         setLoading(false)
         return
       }
 
-      // In a real implementation, this would be a single endpoint
       const [usersResponse, ordersResponse, productsResponse] = await Promise.all([
         fetch(API_ENDPOINTS.users.list, {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -74,6 +71,7 @@ export default function AdminDashboard() {
       const ordersData = await ordersResponse.json()
       const productsData = await productsResponse.json()
 
+
       setStats({
         totalUsers: usersData.total || 0,
         totalOrders: ordersData.total || 0,
@@ -81,7 +79,6 @@ export default function AdminDashboard() {
         totalProducts: productsData.total || 0,
       })
     } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error)
     } finally {
       setLoading(false)
     }

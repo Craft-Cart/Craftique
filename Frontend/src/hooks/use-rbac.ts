@@ -20,8 +20,6 @@ export function useRBAC() {
       }
 
       try {
-        // Sync user with backend database
-        // This ensures the user exists in the backend and gets real data
         if (!syncAttempted) {
           setSyncAttempted(true)
           try {
@@ -30,16 +28,12 @@ export function useRBAC() {
             setLoading(false)
             return
           } catch (syncError) {
-            console.error('Failed to sync user, falling back to Auth0 data:', syncError)
-            // Fallback to Auth0 data if sync fails
           }
         }
 
-        // Fallback: Use Auth0 user data if backend sync fails
-        // This ensures the UI still works even if backend is unavailable
-        const metadataRole = auth0User['https://yourstore.com/role'] as UserRole;
+        const metadataRole = auth0User['https://craftique-api/roles'] as UserRole;
         let userRole: UserRole = UserRole.customer;
-        
+
         if (metadataRole && Object.values(UserRole).includes(metadataRole)) {
           userRole = metadataRole;
         }
@@ -51,14 +45,13 @@ export function useRBAC() {
           email_verified: auth0User.email_verified || false,
           name: auth0User.name || '',
           role: userRole,
-          permissions: auth0User['https://yourstore.com/permissions'] as string[] || [],
+          permissions: auth0User['https://craftique-api/permissions'] as string[] || [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
-        
+
         setCurrentUser(user)
       } catch (err) {
-        console.error('Error loading user for RBAC:', err)
         setCurrentUser(null)
       } finally {
         setLoading(false)

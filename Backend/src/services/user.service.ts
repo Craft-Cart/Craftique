@@ -45,15 +45,13 @@ export class UserService {
     phone?: string;
     role?: UserRole;
   }) {
-    // Check if user exists
     const existing = await this.userRepository.findByEmail(data.email);
     if (existing) {
       throw new ConflictError('User with this email already exists');
     }
 
-    // Generate a temporary auth0_id (in real app, this would come from Auth0)
     const auth0Id = `auth0|temp_${Date.now()}`;
-    
+
     const user = await this.userRepository.create({
       auth0_id: auth0Id,
       email: data.email,

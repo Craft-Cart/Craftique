@@ -63,7 +63,6 @@ export class AnalyticsController {
         date_from,
         date_to
       );
-
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename=${report_type}_${Date.now()}.${format}`);
       res.send(data);

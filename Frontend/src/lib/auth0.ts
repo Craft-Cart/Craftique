@@ -16,9 +16,7 @@ export const auth0 = new Auth0Client({
       : {}),
   },
   session: {
-    // Enable rolling sessions for better security
     rolling: true,
-    // Session expires after 7 days
-    absoluteDuration: 60 * 60 * 24 * 7, // 7 days in seconds
+    absoluteDuration: 60 * 60 * 24 * 7,
   },
 });

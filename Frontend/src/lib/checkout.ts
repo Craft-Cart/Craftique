@@ -43,7 +43,7 @@ export class CheckoutService {
     const response = await fetch(API_ENDPOINTS.orders.create, {
       method: "POST",
       headers: this.getAuthHeaders(),
-      credentials: "include", // Include cookies for authentication
+      credentials: "include",
       body: JSON.stringify(orderData),
     })
 
@@ -52,7 +52,8 @@ export class CheckoutService {
       throw new Error(error.message || "Failed to submit order")
     }
 
-    return response.json()
+    const order = await response.json()
+    return order
   }
 
   static async getOrderById(orderId: string): Promise<Order> {
@@ -68,7 +69,8 @@ export class CheckoutService {
       throw new Error(error.message || "Failed to fetch order")
     }
 
-    return response.json()
+    const order = await response.json()
+    return order
   }
 
   static async checkoutOrder(orderId: string, paymentMethod: string, billingData?: any): Promise<any> {
@@ -88,6 +90,7 @@ export class CheckoutService {
       throw new Error(error.message || "Failed to initiate checkout")
     }
 
-    return response.json()
+    const result = await response.json()
+    return result
   }
 }

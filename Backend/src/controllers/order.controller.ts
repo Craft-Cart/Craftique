@@ -14,8 +14,7 @@ export class OrderController {
   getOrders = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { page, limit, status, user_id } = req.query;
-      
-      // If not admin/moderator, only show own orders
+
       let userId = user_id as string | undefined;
       if (req.user && req.user.role === 'customer') {
         const { UserService } = require('../services/user.service');
@@ -39,8 +38,7 @@ export class OrderController {
   getOrderById = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { order_id } = req.params;
-      
-      // Get user ID if authenticated
+
       let userId: string | undefined;
       if (req.user) {
         const { UserService } = require('../services/user.service');
@@ -64,7 +62,6 @@ export class OrderController {
 
       const { items, shipping_address, billing_address, notes } = req.body;
 
-      // Get internal user ID
       const { UserService } = require('../services/user.service');
       const userService = new UserService();
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
@@ -108,7 +105,6 @@ export class OrderController {
 
       const { order_id } = req.params;
 
-      // Get internal user ID
       const { UserService } = require('../services/user.service');
       const userService = new UserService();
       const user = await userService.getUserByAuth0Id(req.user.auth0_id);
@@ -142,13 +138,11 @@ export class OrderController {
 
   paymobCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // HMAC can be in query string or header
       const hmac = (req.query.hmac as string) || (req.headers['x-paymob-hmac'] as string);
       if (!hmac) {
         return res.status(400).json({ error: 'HMAC signature required' });
       }
 
-      // Parse body if it's a string (raw body)
       let body = req.body;
       if (typeof body === 'string') {
         try {
@@ -167,26 +161,20 @@ export class OrderController {
 
   paymobResponse = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // This is a redirect page after payment
       const { success, id, merchant_order_id, hmac } = req.query;
 
-      // Verify HMAC if provided
       if (hmac) {
-        // Verification logic here
       }
 
-      // Validate and sanitize merchant_order_id (alphanumeric and hyphens only)
       const sanitizedOrderId = String(merchant_order_id || '').replace(/[^a-zA-Z0-9-]/g, '');
       const sanitizedTxnId = String(id || '').replace(/[^a-zA-Z0-9-]/g, '');
       const isSuccess = success === 'true';
 
-      // Build safe redirect URL with query params for frontend to display
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
       const redirectUrl = new URL(`/orders/${encodeURIComponent(sanitizedOrderId)}`, frontendUrl);
       redirectUrl.searchParams.set('payment_status', isSuccess ? 'success' : 'failed');
       redirectUrl.searchParams.set('txn_id', sanitizedTxnId);
 
-      // Direct redirect - no user data in HTML response (prevents XSS)
       res.redirect(redirectUrl.toString());
     } catch (error) {
       next(error);

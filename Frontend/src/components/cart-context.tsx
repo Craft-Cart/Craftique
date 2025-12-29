@@ -32,9 +32,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const stored = localStorage.getItem(CART_STORAGE_KEY)
     if (stored) {
       try {
-        setItems(JSON.parse(stored))
+        const cartItems = JSON.parse(stored);
+        setItems(cartItems);
       } catch (error) {
-        console.error("[v0] Failed to parse cart from localStorage:", error)
       }
     }
     setIsHydrated(true)

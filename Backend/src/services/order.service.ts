@@ -22,7 +22,6 @@ export class OrderService {
       throw new NotFoundError('Order');
     }
 
-    // Check ownership
     if (userId && order.user_id !== userId) {
       throw new ValidationError('Access denied');
     }
@@ -36,10 +35,11 @@ export class OrderService {
     userId?: string;
     status?: string;
   }) {
-    return this.orderRepository.findMany({
+    const result = this.orderRepository.findMany({
       ...options,
-      status: options.status as any, // Type assertion for OrderStatus enum
+      status: options.status as any,
     });
+    return result;
   }
 
   async createOrder(userId: string, data: {
@@ -48,7 +48,6 @@ export class OrderService {
     billingAddress?: any;
     notes?: string;
   }) {
-    // Validate all items exist and are available
     const itemIds = data.items.map(item => item.itemId);
     const items = await this.itemRepository.findByIds(itemIds);
 
@@ -56,7 +55,6 @@ export class OrderService {
       throw new ValidationError('One or more items not found');
     }
 
-    // Calculate totals (server-side calculation - never trust client)
     let subtotal = new Decimal(0);
     const orderItems: any[] = [];
 
@@ -66,7 +64,6 @@ export class OrderService {
         throw new ValidationError(`Item ${orderItem.itemId} not found`);
       }
 
-      // Check availability
       if (item.quantity < orderItem.quantity) {
         throw new ValidationError(`Insufficient quantity for item ${item.name}`);
       }
@@ -87,16 +84,13 @@ export class OrderService {
       });
     }
 
-    // Calculate shipping and tax (simplified)
-    const shipping = new Decimal(50); // Fixed shipping cost
-    const tax = subtotal.mul(0.14); // 14% tax
+    const shipping = new Decimal(50);
+    const tax = subtotal.mul(0.14);
     const discount = new Decimal(0);
     const total = subtotal.add(shipping).add(tax).sub(discount);
 
-    // Reserve items (decrement quantity)
     await this.itemService.reserveItems(data.items);
 
-    // Create order
     const orderNumber = generateOrderNumber();
     
     const order = await this.orderRepository.create({

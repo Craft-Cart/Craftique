@@ -14,7 +14,6 @@ export class AuthController {
       const { email, password } = req.body;
       const result = await this.authService.login(email, password);
 
-      // Set tokens in HttpOnly cookies
       setAuthCookie(res, result.access_token, result.refresh_token);
 
       res.json({
@@ -34,7 +33,6 @@ export class AuthController {
       const { email, password, name, phone } = req.body;
       const result = await this.authService.register(email, password, name, phone);
 
-      // Set tokens in HttpOnly cookies
       setAuthCookie(res, result.access_token, result.refresh_token);
 
       res.status(201).json({
@@ -59,7 +57,6 @@ export class AuthController {
 
       const result = await this.authService.refreshToken(refreshToken);
 
-      // Update access token cookie
       setAuthCookie(res, result.access_token);
 
       res.json(result);

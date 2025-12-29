@@ -20,7 +20,6 @@ export default function CheckoutPage() {
   const [paymentData, setPaymentData] = useState<PaymentDetails | null>(null)
   const [order, setOrder] = useState<Order | null>(null)
 
-  // Redirect to cart if empty
   useEffect(() => {
     if (items.length === 0 && currentStep < 4) {
       router.push("/cart")
@@ -41,7 +40,6 @@ export default function CheckoutPage() {
 
     if (!shippingData) return
 
-    // Submit order
     const newOrder = await CheckoutService.submitOrder(items, shippingData, data)
     setOrder(newOrder)
     clearCart()

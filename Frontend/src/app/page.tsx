@@ -20,8 +20,8 @@ interface PageProps {
 async function ProductsContent({ searchParams }: PageProps) {
   const params = await searchParams;
 
-  const page = Number(params.page) || 1;
-  const limit = 8;
+  const page = Number(params.page) ||1;
+  const limit =8;
 
   const { data: products, pagination } = await CatalogService.getProducts({
     page,

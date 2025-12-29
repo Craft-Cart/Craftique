@@ -16,11 +16,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create a response object for getAccessToken (required by Auth0 SDK)
     const responseObj = new NextResponse();
 
-    // Get access token
-    // getAccessToken requires both req and res in App Router
     const tokenData = await auth0.getAccessToken(request, responseObj);
 
     if (!tokenData || !tokenData.token) {
@@ -30,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify token with backend and sync user
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
     const response = await fetch(`${backendUrl}/auth/verify`, {
       method: 'GET',
@@ -58,7 +54,6 @@ export async function POST(request: NextRequest) {
       user: data.user
     });
   } catch (error: any) {
-    // Handle Auth0 AccessTokenError - redirect to logout
     if (error?.code === 'missing_refresh_token' ||
         error?.code === 'invalid_grant' ||
         error?.message?.includes('access token has expired')) {
@@ -66,11 +61,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/logout', request.url));
     }
 
-    console.error('Error syncing user:', error);
     return NextResponse.json(
       { error: 'Failed to sync user', details: error.message },
       { status: 500 }
     );
   }
 }
-
