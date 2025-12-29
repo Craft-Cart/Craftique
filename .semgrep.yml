@@ -11,8 +11,9 @@ rules:
 
   - id: mass-assignment-general-update
     pattern: $OBJ.update($BODY)
-    where:
-      $BODY is req.body
+    metavariable-pattern:
+      metavariable: $BODY
+      pattern: req.body
     message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
     severity: WARNING
     languages: [typescript, javascript]
