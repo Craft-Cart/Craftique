@@ -54,10 +54,12 @@ export const logger = winston.createLogger({
 });
 
 // Add console transport for development
+// IMPORTANT: Apply redaction to console output to prevent credential leaks in stdout
 if (config.nodeEnv !== 'production') {
   logger.add(
     new winston.transports.Console({
       format: winston.format.combine(
+        redactSensitive(), // Apply redaction before formatting
         winston.format.colorize(),
         winston.format.simple()
       ),

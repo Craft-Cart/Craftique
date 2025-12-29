@@ -84,10 +84,18 @@ export const errorHandler = (err: Error, req: any, res: Response, _next: any) =>
     return;
   }
 
-  // Handle Prisma errors
-  if (err.name === 'PrismaClientKnownRequestError') {
+  // Handle Prisma errors - prevent database schema leaks
+  // Check for all Prisma error types to prevent schema information leakage
+  if (err.name === 'PrismaClientKnownRequestError' || 
+      err.name === 'PrismaClientUnknownRequestError' ||
+      err.name === 'PrismaClientValidationError' ||
+      err.name === 'PrismaClientInitializationError' ||
+      err.name === 'PrismaClientRustPanicError') {
     const prismaError = err as any;
+    
+    // Only handle specific known error codes that are safe to expose
     if (prismaError.code === 'P2002') {
+      // Unique constraint violation - safe to expose
       res.status(409).json({
         error: 'Conflict',
         message: 'A record with this value already exists',
@@ -95,15 +103,60 @@ export const errorHandler = (err: Error, req: any, res: Response, _next: any) =>
       return;
     }
     if (prismaError.code === 'P2025') {
+      // Record not found - safe to expose
       res.status(404).json({
         error: 'NotFound',
         message: 'Record not found',
       });
       return;
     }
+    
+    // For all other Prisma errors, return generic message to prevent schema leaks
+    // This prevents leaking table names, column names, constraint names, etc.
+    logger.error('Prisma error occurred', {
+      error: {
+        name: err.name,
+        code: prismaError.code,
+        message: err.message,
+        meta: prismaError.meta,
+      },
+    });
+    
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred',
+    });
+    return;
   }
 
-  // Generic error response
+  // Handle database connection errors
+  if (err.message && (
+    err.message.includes('ECONNREFUSED') ||
+    err.message.includes('ETIMEDOUT') ||
+    err.message.includes('database') ||
+    err.message.includes('connection') ||
+    err.message.includes('SQL') ||
+    err.message.includes('syntax error') ||
+    err.message.includes('relation') ||
+    err.message.includes('column') ||
+    err.message.includes('constraint')
+  )) {
+    // Database-related errors - never expose schema details
+    logger.error('Database error occurred', {
+      error: {
+        name: err.name,
+        message: err.message,
+      },
+    });
+    
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: 'An unexpected error occurred',
+    });
+    return;
+  }
+
+  // Generic error response - never expose internal error details in production
   res.status(500).json({
     error: 'Internal Server Error',
     message: config.nodeEnv === 'development' ? err.message : 'An unexpected error occurred',
