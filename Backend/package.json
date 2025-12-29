@@ -18,7 +18,8 @@
     "check-validation": "node scripts/check-validation.js",
     "check-db-constraints": "node scripts/check-db-constraints.js",
     "check-log-redaction": "node scripts/check-log-redaction.js",
-    "check-error-handler": "node scripts/check-error-handler.js"
+    "check-error-handler": "node scripts/check-error-handler.js",
+    "check-vulnerabilities": "node scripts/check-vulnerabilities.js"
   },
   "keywords": [
     "express",
