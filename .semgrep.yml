@@ -1,4 +1,7 @@
 rules:
+  # ============================================
+  # Mass Assignment Detection Rules
+  # ============================================
   - id: mass-assignment-prisma-update
     patterns:
       - pattern:  "$PRISMA.$MODEL.update({ data: $DATA, ... })"
@@ -17,6 +20,145 @@ rules:
           pattern: req.body
     message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
     severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-prisma-update-spread
+    patterns:
+      - pattern: "$PRISMA.$MODEL.update({ data: { ...$SPREAD }, ... })"
+      - metavariable-pattern:
+          metavariable: $SPREAD
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Using spread operator with req.body in Prisma update. Manually destructure specific fields instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-prisma-create
+    patterns:
+      - pattern: "$PRISMA.$MODEL.create({ data: $DATA, ... })"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Using req.body directly in Prisma create. Manually destructure inputs to prevent mass assignment."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-repository-update
+    patterns:
+      - pattern: "$REPO.update($ID, $DATA)"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Passing req.body directly to repository update method. Manually destructure inputs (e.g., { name: req.body.name }) instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-service-update
+    patterns:
+      - pattern: "$SERVICE.update($ID, $DATA)"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Passing req.body directly to service update method. Manually destructure inputs instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  # ============================================
+  # SQL Injection Detection Rules
+  # ============================================
+  - id: sql-injection-raw-query-string-concat
+    patterns:
+      - pattern: |
+          $QUERY = $SQL + $VAR
+      - pattern: |
+          $QUERY = $VAR + $SQL
+      - pattern: |
+          $QUERY = `...${$VAR}...`
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: prisma.$queryRaw(...)
+            - pattern: prisma.$executeRaw(...)
+            - pattern: $DB.query(...)
+            - pattern: $DB.execute(...)
+            - pattern: $POOL.query(...)
+            - pattern: $CLIENT.query(...)
+    message: "SQL Injection vulnerability: String concatenation in SQL query detected. Use parameterized queries with $1, $2 syntax (pg) or ORM binding instead of string concatenation."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-template-literal-raw
+    patterns:
+      - pattern: |
+          prisma.$queryRaw`SELECT * FROM $TABLE WHERE id = ${$VAR}`
+      - pattern: |
+          prisma.$executeRaw`UPDATE $TABLE SET name = ${$VAR}`
+      - pattern: |
+          $DB.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+      - pattern: |
+          $POOL.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+    message: "SQL Injection vulnerability: Template literal interpolation in raw SQL query. Use Prisma.$queryRaw with Prisma.sql template tag and parameterized queries ($1, $2) instead."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-prisma-raw-without-sql-tag
+    patterns:
+      - pattern: |
+          prisma.$queryRaw($QUERY)
+      - pattern-not-inside: |
+          Prisma.sql`...`
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+    message: "SQL Injection vulnerability: Raw SQL query without Prisma.sql template tag. Use Prisma.sql template tag for safe parameterized queries."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-pg-query-string-concat
+    patterns:
+      - pattern: |
+          $CLIENT.query($QUERY, ...)
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+            - pattern: "'" + $VAR + "'"
+            - pattern: '"' + $VAR + '"'
+    message: "SQL Injection vulnerability: String concatenation in pg query. Use parameterized queries with $1, $2, $3 placeholders instead (e.g., query('SELECT * FROM users WHERE id = $1', [userId]))."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-pg-query-missing-params
+    patterns:
+      - pattern: |
+          $CLIENT.query($QUERY)
+      - pattern-not: |
+          $CLIENT.query($QUERY, [$PARAMS])
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+    message: "SQL Injection vulnerability: pg query with string interpolation but no parameter array. Use parameterized queries: query('SELECT * FROM users WHERE id = $1', [userId])."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-raw-sql-with-vars
+    patterns:
+      - pattern: |
+          $DB.query($SQL, $VARS)
+      - metavariable-pattern:
+          metavariable: $SQL
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+    message: "SQL Injection vulnerability: SQL query string contains variable interpolation. Use parameterized queries with placeholders ($1, $2) and pass values in parameter array."
+    severity: ERROR
     languages: [typescript, javascript]
 
   - id: insecure-random-math-random
