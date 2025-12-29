@@ -27,7 +27,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "0.18.0",
+    "agpl":"^0.0.1",
     "@prisma/client": "^5.19.1",
     "@sendgrid/mail": "^8.1.3",
     "auth0": "^5.2.0",
