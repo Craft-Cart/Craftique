@@ -241,3 +241,48 @@ export const exportAnalyticsSchema = z.object({
   date_to: z.string().date().optional(),
 }).strict();
 
+// Inventory schemas
+export const adjustInventorySchema = z.object({
+  item_id: z.string().uuid(),
+  quantity: z.number().int().min(1),
+  operation: z.enum(['in', 'out', 'adjustment']),
+  reason: z.string().optional(),
+}).strict();
+
+export const bulkUpdateInventorySchema = z.object({
+  updates: z.array(z.object({
+    item_id: z.string().uuid(),
+    quantity: z.number().int().min(1),
+    operation: z.enum(['in', 'out', 'adjustment']),
+    reason: z.string().optional(),
+  })).min(1),
+}).strict();
+
+// Notification schemas (empty for mark as read)
+export const markAsReadSchema = z.object({}).strict();
+export const markAllAsReadSchema = z.object({}).strict();
+export const notificationParamsSchema = z.object({
+  notification_id: z.string().uuid(),
+}).strict();
+
+// Payment schemas
+export const paymobCallbackSchema = z.object({
+  // Paymob webhook schema - add specific fields as needed
+  type: z.string().optional(),
+  obj: z.object({}).optional(), // Flexible for webhook
+}).strict();
+
+// Review schemas
+export const approveReviewSchema = z.object({}).strict();
+
+// Wishlist schemas
+export const addToWishlistSchema = z.object({
+  item_id: z.string().uuid(),
+}).strict();
+export const wishlistParamsSchema = z.object({
+  wishlist_id: z.string().uuid(),
+}).strict();
+
+// Logout schema (empty)
+export const logoutSchema = z.object({}).strict();
+

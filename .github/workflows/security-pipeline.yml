@@ -77,6 +77,7 @@ jobs:
         uses: semgrep/semgrep-action@v1
         with:
           config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
+          baseline-ref: ""
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
@@ -207,6 +208,10 @@ jobs:
       - name: Install Backend dependencies
         working-directory: Backend
         run: npm ci
+
+      - name: Check validation middleware on write routes
+        working-directory: Backend
+        run: npm run check-validation
 
       - name: Generate Prisma Client
         working-directory: Backend

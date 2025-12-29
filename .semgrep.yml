@@ -1,7 +1,7 @@
 rules:
   - id: mass-assignment-prisma-update
     patterns:
-      - pattern: $PRISMA.$MODEL.update({ data: $DATA, ... })
+      - pattern:  "$PRISMA.$MODEL.update({ data: $DATA, ... })"
       - metavariable-pattern:
           metavariable: $DATA
           pattern: req.body
@@ -10,9 +10,80 @@ rules:
     languages: [typescript, javascript]
 
   - id: mass-assignment-general-update
-    pattern: $OBJ.update($BODY)
-    where:
-      $BODY is req.body
+    patterns:
+      - pattern: $OBJ.update($BODY)
+      - metavariable-pattern:
+          metavariable: $BODY
+          pattern: req.body
     message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: insecure-random-math-random
+    pattern: Math.random()
+    message: "Insecure random number generation: Math.random() is not cryptographically secure. Use crypto.randomBytes() for security tokens, passwords, or any security-sensitive operations."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: insecure-cookie-settings
+    patterns:
+      - pattern: res.cookie($NAME, $VALUE, $OPTIONS)
+      - pattern-not-inside: |
+          httpOnly: true
+      - pattern-not-inside: |
+          secure: true
+      - pattern-not-inside: |
+          sameSite: 'strict'
+    message: "Insecure cookie settings: Cookies should be set with httpOnly: true, secure: true, and sameSite: 'strict' to prevent XSS and CSRF attacks. Use setAuthCookie() helper for JWT tokens."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: insecure-jwt-verification
+    patterns:
+      - pattern: jwt.verify($TOKEN, $SECRET)
+      - pattern-not-inside: |
+          algorithms: ['HS256']
+      - pattern-not-inside: |
+          algorithms: ['RS256']
+    message: "Insecure JWT verification: jwt.verify() should specify algorithms explicitly (e.g., algorithms: ['HS256'] or ['RS256']) to prevent algorithm confusion attacks."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: manual-jwt-decoding
+    pattern: Buffer.from($PAYLOAD, 'base64').toString()
+    message: "Manual JWT decoding detected: Avoid manual JWT decoding. Use proper JWT verification libraries with algorithm specification to prevent security vulnerabilities."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: missing-ownership-check
+    patterns:
+      - pattern: |
+          $RESOURCE = await $REPO.findById($ID)
+          ...
+          return $RESOURCE
+      - pattern-not: |
+          if ($RESOURCE.owner_id !== req.user.id) {
+            ...
+          }
+      - pattern-not: |
+          requireOwnership()
+    message: "Potential authorization bypass: Returning resource data without verifying ownership (resource.owner_id === req.user.id). Ensure proper authorization checks before returning sensitive data."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: missing-user-filter-query
+    patterns:
+      - pattern: prisma.$MODEL.findMany(...)
+      - pattern-not-inside: |
+          where: {
+            user_id: req.user.id,
+            ...
+          }
+      - pattern-not-inside: |
+          where: {
+            owner_id: req.user.id,
+            ...
+          }
+    message: "Potential data leakage: Querying user-specific data without filtering by current user. Add user_id or owner_id filter to prevent unauthorized access."
     severity: WARNING
     languages: [typescript, javascript]

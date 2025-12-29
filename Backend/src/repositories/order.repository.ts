@@ -1,5 +1,6 @@
 import { Order, OrderStatus, Prisma } from '@prisma/client';
 import { prisma } from '../config/database';
+import crypto from 'crypto';
 
 export class OrderRepository {
   async findById(id: string): Promise<Order | null> {
@@ -137,8 +138,8 @@ export class OrderRepository {
 
   async generateOrderNumber(): Promise<string> {
     const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `ORD-${timestamp}-${random}`;
+    const random = crypto.randomBytes(2).readUInt16BE(0) % 10000;
+    return `ORD-${timestamp}-${random.toString().padStart(4, '0')}`;
   }
 }
 

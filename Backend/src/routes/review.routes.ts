@@ -7,6 +7,7 @@ import {
   updateReviewSchema,
   reviewParamsSchema,
   reviewQuerySchema,
+  approveReviewSchema,
 } from '../validators/schemas';
 
 const router = Router();
@@ -48,6 +49,7 @@ router.post(
   verifyJWT,
   requireRole('admin', 'moderator'),
   validateParams(reviewParamsSchema),
+  validateBody(approveReviewSchema),
   reviewController.approveReview
 );
 

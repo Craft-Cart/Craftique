@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { WishlistController } from '../controllers/wishlist.controller';
 import { verifyJWT } from '../middleware/auth';
+import { validateBody, validateParams } from '../middleware/validation';
+import { addToWishlistSchema, wishlistParamsSchema } from '../validators/schemas';
 
 const router = Router();
 const wishlistController = new WishlistController();
@@ -9,7 +11,7 @@ const wishlistController = new WishlistController();
 router.use(verifyJWT);
 
 router.get('/', wishlistController.getWishlist);
-router.post('/', wishlistController.addToWishlist);
-router.delete('/:wishlist_id', wishlistController.removeFromWishlist);
+router.post('/', validateBody(addToWishlistSchema), wishlistController.addToWishlist);
+router.delete('/:wishlist_id', validateParams(wishlistParamsSchema), wishlistController.removeFromWishlist);
 
 export default router;

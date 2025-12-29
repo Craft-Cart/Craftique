@@ -14,7 +14,8 @@
     "lint": "eslint src --ext .ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "check-validation": "node scripts/check-validation.js"
   },
   "keywords": [
     "express",

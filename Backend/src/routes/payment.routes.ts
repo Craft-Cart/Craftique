@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import express from 'express';
 import { OrderController } from '../controllers/order.controller';
+import { validateBody } from '../middleware/validation';
+import { paymobCallbackSchema } from '../validators/schemas';
 
 const router = Router();
 const orderController = new OrderController();
@@ -19,6 +21,7 @@ router.post(
     }
     next();
   },
+  validateBody(paymobCallbackSchema),
   orderController.paymobCallback
 );
 
