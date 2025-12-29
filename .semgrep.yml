@@ -1,0 +1,18 @@
+rules:
+  - id: mass-assignment-prisma-update
+    patterns:
+      - pattern: $PRISMA.$MODEL.update({ data: $DATA, ... })
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Using req.body directly in Prisma update. Manually destructure inputs to prevent mass assignment."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-general-update
+    pattern: $OBJ.update($BODY)
+    where:
+      $BODY is req.body
+    message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
+    severity: WARNING
+    languages: [typescript, javascript]
