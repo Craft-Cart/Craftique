@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { InventoryController } from '../controllers/inventory.controller';
 import { verifyJWT, requireRole } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
+import { adjustInventorySchema, bulkUpdateInventorySchema } from '../validators/schemas';
 
 const router = Router();
 const inventoryController = new InventoryController();
@@ -10,8 +11,8 @@ const inventoryController = new InventoryController();
 router.use(verifyJWT);
 
 // Admin/manager only for adjustments
-router.post('/adjust', requireRole('admin', 'moderator'), validateBody, inventoryController.adjustInventory);
-router.post('/bulk-update', requireRole('admin', 'moderator'), validateBody, inventoryController.bulkUpdateInventory);
+router.post('/adjust', requireRole('admin', 'moderator'), validateBody(adjustInventorySchema), inventoryController.adjustInventory);
+router.post('/bulk-update', requireRole('admin', 'moderator'), validateBody(bulkUpdateInventorySchema), inventoryController.bulkUpdateInventory);
 
 // View-only for regular users
 router.get('/logs', inventoryController.getInventoryLogs);

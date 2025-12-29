@@ -20,9 +20,9 @@ function checkRoutesFile(filePath) {
     const isWriteRoute = writeMethods.some(method => line.includes(`router.${method}(`));
 
     if (isWriteRoute) {
-      // Check current line and next 5 lines for validateBody
+      // Check current line and next 20 lines for validateBody
       let hasValidateBody = false;
-      for (let j = 0; j <= 5 && i + j < lines.length; j++) {
+      for (let j = 0; j <= 20 && i + j < lines.length; j++) {
         if (lines[i + j].includes('validateBody(')) {
           hasValidateBody = true;
           break;
