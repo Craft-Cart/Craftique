@@ -78,7 +78,7 @@ jobs:
         uses: semgrep/semgrep-action@v1
         with:
           config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
-          baseline-ref: ""
+          # Use a standard filename and ensure SARIF isn't forced if you want JSON
           output: semgrep-custom-results.json
         continue-on-error: true
 
@@ -86,9 +86,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: custom-semgrep-results
+          name: semgrep-results # Keep the name simple
           path: semgrep-custom-results.json
-          retention-days: 30
+          # This prevents the step from failing if Semgrep didn't create a file
+          if-no-files-found: warn
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
@@ -518,6 +519,34 @@ jobs:
     needs: [security-quick-scan, code-analysis, build-and-test]
     if: always()
     steps:
+      # 1. We need the repo to run the JS script context
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Download the results from the previous job
+      - name: Download Semgrep Results
+        uses: actions/download-artifact@v4
+        with:
+          name: semgrep-results
+          # This downloads the file into the current working directory
+          path: . 
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let customFindings = { results: [] };
+            
+            // Now the file will actually be here!
+            if (fs.existsSync('semgrep-custom-results.json')) {
+                const data = fs.readFileSync('semgrep-custom-results.json', 'utf8');
+                customFindings = JSON.parse(data);
+            } else {
+                console.log('File semgrep-custom-results.json not found after download');
+            }
+                
       - name: Evaluate security results
         run: |
           echo "🔐 Security Pipeline Summary"
