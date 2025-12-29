@@ -34,7 +34,6 @@ export class AuthService {
 
   async login(email: string, password: string) {
     try {
-      console.log('[AuthService] login - Logging in user:', email);
       const response = await axios.post(
         `https://${config.auth0.domain}/oauth/token`,
         {
@@ -174,7 +173,6 @@ export class AuthService {
         }
       );
 
-      console.log('[AuthService] login - Login successful for user:', user.id);
       return {
         access_token,
         refresh_token,
@@ -205,10 +203,8 @@ export class AuthService {
 
   async register(email: string, password: string, name: string, phone?: string) {
     try {
-      console.log('[AuthService] register - Registering user:', email);
       const existingUser = await this.userRepository.findByEmail(email);
       if (existingUser) {
-        console.log('[AuthService] register - User already exists');
         throw new ConflictError('User with this email already exists');
       }
 
@@ -242,10 +238,8 @@ export class AuthService {
         permissions: [],
       });
 
-      console.log('[AuthService] register - User registered successfully');
       return this.login(email, password);
     } catch (error: any) {
-      console.error('[AuthService] register - Registration failed:', error);
       logger.error('Registration failed', { error: error.message, email });
 
       if (error.response?.status === 409) {
@@ -258,7 +252,6 @@ export class AuthService {
 
   async refreshToken(refreshToken: string) {
     try {
-      console.log('[AuthService] refreshToken - Refreshing token');
       const response = await axios.post(
         `https://${config.auth0.domain}/oauth/token`,
         {
@@ -269,14 +262,12 @@ export class AuthService {
         }
       );
 
-      console.log('[AuthService] refreshToken - Token refreshed successfully');
       return {
         access_token: response.data.access_token,
         token_type: 'Bearer',
         expires_in: response.data.expires_in,
       };
     } catch (error: any) {
-      console.error('[AuthService] refreshToken - Error:', error);
       logger.error('Token refresh failed', { error: error.message });
       throw new AuthenticationError('Invalid refresh token');
     }
@@ -284,7 +275,6 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     try {
-      console.log('[AuthService] forgotPassword - Requesting password reset for email:', email);
       await axios.post(
         `https://${config.auth0.domain}/dbconnections/change_password`,
         {
@@ -294,10 +284,8 @@ export class AuthService {
         }
       );
 
-      console.log('[AuthService] forgotPassword - Password reset email sent');
       return { message: 'Password reset email sent' };
     } catch (error: any) {
-      console.error('[AuthService] forgotPassword - Error:', error);
       logger.error('Password reset request failed', { error: error.message, email });
       return { message: 'If the email exists, a password reset link has been sent' };
     }
@@ -305,7 +293,6 @@ export class AuthService {
 
   async verifyToken(token: string) {
     try {
-      console.log('[AuthService] verifyToken - Verifying token');
       const jwt = require('jsonwebtoken');
       const jwksClient = require('jwks-rsa');
 
@@ -449,14 +436,12 @@ export class AuthService {
         });
       }
 
-      console.log('[AuthService] verifyToken - Token verified for user:', user.id);
       return {
         valid: true,
         user,
         token_claims: decodedToken,
       };
     } catch (error: any) {
-      console.error('[AuthService] verifyToken - Error:', error);
       logger.error('Token verification failed', { error: error.message });
       throw new AuthenticationError('Invalid token');
     }
@@ -554,7 +539,7 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string) {
     try {
-      const response = await axios.post(
+      await axios.post(
         `https://${config.auth0.domain}/dbconnections/change_password`,
         {
           client_id: config.auth0.clientId,
@@ -564,7 +549,6 @@ export class AuthService {
         }
       );
 
-      console.log('Password reset response:', response.data);
       return { message: 'Password reset successfully' };
     } catch (error: any) {
       logger.error('Password reset failed', { error: error.message });

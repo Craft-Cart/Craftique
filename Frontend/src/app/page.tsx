@@ -18,13 +18,11 @@ interface PageProps {
 }
 
 async function ProductsContent({ searchParams }: PageProps) {
-  console.log('[Page: Home] Rendering with params:', await searchParams);
   const params = await searchParams;
 
   const page = Number(params.page) ||1;
   const limit =8;
 
-  console.log('[Page: Home] Fetching products with filters:', { page, limit, category: params.category, search: params.search });
   const { data: products, pagination } = await CatalogService.getProducts({
     page,
     limit,
@@ -34,10 +32,8 @@ async function ProductsContent({ searchParams }: PageProps) {
     maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
     inStock: params.inStock === "true" ? true : undefined,
   });
-  console.log('[Page: Home] Products retrieved:', products.length, 'of', pagination.total);
 
   const categories = await CatalogService.getCategories();
-  console.log('[Page: Home] Categories retrieved:', categories.length);
 
   return (
     <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -124,7 +120,6 @@ function ProductsSkeleton() {
 }
 
 export default function Page(props: PageProps) {
-  console.log('[Page: Home] Component mounting');
   return (
     <Suspense fallback={<ProductsSkeleton />}>
       <ProductsContent {...props} />

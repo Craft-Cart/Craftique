@@ -10,32 +10,31 @@ import { Product, Wishlist } from '@/lib/types'
 interface WishlistPageProps {}
 
 export default function WishlistPage() {
-  console.log('[Page: Wishlist] Component mounting');
   const [wishlist, setWishlist] = useState<Wishlist[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+
+  const getAuthToken = () => {
+    return localStorage.getItem('auth0_access_token') || ''
+  }
 
   useEffect(() => {
     fetchWishlist()
   }, [])
 
   const fetchWishlist = async () => {
-    console.log('[Page: Wishlist] Fetching wishlist');
     try {
       const mockResponse = await fetch('/api/wishlist')
       const data = await mockResponse.json()
-      console.log('[Page: Wishlist] Wishlist retrieved:', data.wishlist?.length, 'items');
       setWishlist(data.wishlist || [])
       setProducts(data.products || [])
     } catch (error) {
-      console.error('[Page: Wishlist] Error fetching wishlist:', error)
     } finally {
       setLoading(false)
     }
   }
 
   const addToWishlist = async (productId: string) => {
-    console.log('[Page: Wishlist] Adding to wishlist:', productId);
     try {
       const response = await fetch('/api/wishlist', {
         method: 'POST',
@@ -47,33 +46,13 @@ export default function WishlistPage() {
       })
 
       if (response.ok) {
-        console.log('[Page: Wishlist] Added to wishlist successfully');
         fetchWishlist()
       }
     } catch (error) {
-      console.error('[Page: Wishlist] Error adding to wishlist:', error)
-    }
-  }
-
-  const removeFromWishlist = async (wishlistId: string) => {
-    console.log('[Page: Wishlist] Removing from wishlist:', wishlistId);
-    try {
-      const response = await fetch(`/api/wishlist/${wishlistId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
-      })
-
-      if (response.ok) {
-        console.log('[Page: Wishlist] Removed from wishlist successfully');
-        fetchWishlist()
-      }
-    } catch (error) {
-      console.error('[Page: Wishlist] Error removing from wishlist:', error)
     }
   }
 
   const addToCart = async (product: Product) => {
-    console.log('[Page: Wishlist] Adding to cart:', product.name);
     try {
       const response = await fetch('/api/cart', {
         method: 'POST',
@@ -88,15 +67,23 @@ export default function WishlistPage() {
       })
 
       if (response.ok) {
-        console.log('[Page: Wishlist] Added to cart successfully');
       }
     } catch (error) {
-      console.error('[Page: Wishlist] Error adding to cart:', error)
     }
   }
 
-  const getAuthToken = () => {
-    return localStorage.getItem('auth0_access_token') || ''
+  const removeFromWishlist = async (wishlistId: string) => {
+    try {
+      const response = await fetch(`/api/wishlist/${wishlistId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+      })
+
+      if (response.ok) {
+        fetchWishlist()
+      }
+    } catch (error) {
+    }
   }
 
   const formatCurrency = (amount: number) => {

@@ -10,24 +10,18 @@ export class UserService {
   }
 
   async getUserById(id: string) {
-    console.log('[UserService] getUserById - Fetching user:', id);
     const user = await this.userRepository.findById(id);
     if (!user) {
-      console.log('[UserService] getUserById - User not found');
       throw new NotFoundError('User');
     }
-    console.log('[UserService] getUserById - User retrieved:', user.name);
     return this.sanitizeUser(user);
   }
 
   async getUserByAuth0Id(auth0Id: string) {
-    console.log('[UserService] getUserByAuth0Id - Fetching user by auth0_id:', auth0Id);
     const user = await this.userRepository.findByAuth0Id(auth0Id);
     if (!user) {
-      console.log('[UserService] getUserByAuth0Id - User not found');
       throw new NotFoundError('User');
     }
-    console.log('[UserService] getUserByAuth0Id - User retrieved:', user.name);
     return this.sanitizeUser(user);
   }
 
@@ -36,9 +30,7 @@ export class UserService {
     limit?: number;
     role?: UserRole;
   }) {
-    console.log('[UserService] getUsers - Fetching users with options:', options);
     const result = await this.userRepository.findMany(options);
-    console.log('[UserService] getUsers - Retrieved', result.users?.length || 0, 'users');
     return {
       users: result.users.map(u => this.sanitizeUser(u)),
       total: result.total,
@@ -53,10 +45,8 @@ export class UserService {
     phone?: string;
     role?: UserRole;
   }) {
-    console.log('[UserService] createUser - Creating user:', data.email);
     const existing = await this.userRepository.findByEmail(data.email);
     if (existing) {
-      console.log('[UserService] createUser - User already exists');
       throw new ConflictError('User with this email already exists');
     }
 
@@ -71,7 +61,6 @@ export class UserService {
       permissions: [],
     });
 
-    console.log('[UserService] createUser - User created:', user.id);
     return this.sanitizeUser(user);
   }
 

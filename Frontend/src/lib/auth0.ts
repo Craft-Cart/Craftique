@@ -1,6 +1,5 @@
 import { Auth0Client } from '@auth0/nextjs-auth0/server';
 
-console.log('[Auth0] Initializing Auth0 client');
 export const auth0 = new Auth0Client({
   domain: process.env.AUTH0_DOMAIN || '',
   clientId: process.env.AUTH0_CLIENT_ID || '',
@@ -21,4 +20,3 @@ export const auth0 = new Auth0Client({
     absoluteDuration: 60 * 60 * 24 * 7,
   },
 });
-console.log('[Auth0] Auth0 client initialized with domain:', process.env.AUTH0_DOMAIN || process.env.NEXT_PUBLIC_AUTH0_DOMAIN);

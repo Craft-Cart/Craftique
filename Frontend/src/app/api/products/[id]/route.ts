@@ -25,12 +25,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  console.log('[API Route: /api/products/[id]] GET request received for product:', (await params).id);
   const { id } = await params;
   const product = mockProducts.find((p) => p.id === id);
 
   if (!product) {
-    console.log('[API Route: /api/products/[id]] Product not found:', id);
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
@@ -39,6 +37,5 @@ export async function GET(
     inStock: product.stock > 0,
   };
 
-  console.log('[API Route: /api/products/[id]] Product retrieved:', product.name);
   return NextResponse.json(productWithStockStatus);
 }

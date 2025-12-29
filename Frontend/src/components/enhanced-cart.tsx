@@ -19,6 +19,10 @@ export function EnhancedCart() {
   const [cartName, setCartName] = useState('')
   const [total, setTotal] = useState(0)
 
+  const getAuthToken = () => {
+    return localStorage.getItem('auth0_access_token') || ''
+  }
+
   useEffect(() => {
     fetchCart()
     fetchSavedCarts()
@@ -33,8 +37,6 @@ export function EnhancedCart() {
         setCart(JSON.parse(savedCart))
       }
     } catch (error) {
-      console.error('Failed to fetch cart:', error)
-    } finally {
       setLoading(false)
     }
   }
@@ -49,7 +51,6 @@ export function EnhancedCart() {
         setSavedCarts(data.saved_carts || [])
       }
     } catch (error) {
-      console.error('Failed to fetch saved carts:', error)
     }
   }
 
@@ -101,7 +102,6 @@ export function EnhancedCart() {
         fetchSavedCarts()
       }
     } catch (error) {
-      console.error('Failed to save cart:', error)
     }
   }
 
@@ -113,7 +113,6 @@ export function EnhancedCart() {
         localStorage.setItem('cart', JSON.stringify(savedCart.items))
       }
     } catch (error) {
-      console.error('Failed to load saved cart:', error)
     }
   }
 
@@ -128,12 +127,7 @@ export function EnhancedCart() {
         setSavedCarts(savedCarts.filter(cart => cart.id !== savedCartId))
       }
     } catch (error) {
-      console.error('Failed to delete saved cart:', error)
     }
-  }
-
-  const getAuthToken = () => {
-    return localStorage.getItem('auth0_access_token') || ''
   }
 
   const formatCurrency = (amount: number) => {

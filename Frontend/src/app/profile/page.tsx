@@ -1,10 +1,8 @@
 import { auth0 } from '@/lib/auth0';
 
 export default auth0.withPageAuthRequired(async function Profile() {
-  console.log('[Page: Profile] Component mounting');
   const session = await auth0.getSession();
   const user = session?.user;
-  console.log('[Page: Profile] User:', user?.email);
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">

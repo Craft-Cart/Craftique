@@ -16,7 +16,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart()
 
   const handleAddToCart = () => {
-    console.log('[ProductCard] Adding product to cart:', product.name);
     addItem(product, 1)
   }
 

@@ -11,9 +11,7 @@ export function useRBAC() {
 
   useEffect(() => {
     const loadUser = async () => {
-      console.log('[useRBAC] Loading user...');
       if (!auth0User) {
-        console.log('[useRBAC] No Auth0 user, clearing state');
         setCurrentUser(null)
         setLoading(false)
         setSyncAttempted(false)
@@ -25,13 +23,11 @@ export function useRBAC() {
         if (!syncAttempted) {
           setSyncAttempted(true)
           try {
-            console.log('[useRBAC] Syncing user with backend...');
             const syncedUser = await authService.syncUser(auth0User)
             setCurrentUser(syncedUser)
             setLoading(false)
             return
           } catch (syncError) {
-            console.error('[useRBAC] Failed to sync user, falling back to Auth0 data:', syncError)
           }
         }
 
@@ -54,10 +50,8 @@ export function useRBAC() {
           updated_at: new Date().toISOString(),
         }
 
-        console.log('[useRBAC] User loaded:', user.email, 'role:', user.role);
         setCurrentUser(user)
       } catch (err) {
-        console.error('[useRBAC] Error loading user for RBAC:', err)
         setCurrentUser(null)
       } finally {
         setLoading(false)
