@@ -221,6 +221,10 @@ jobs:
         working-directory: Backend
         run: npm run check-log-redaction
 
+      - name: Check global error handler configuration
+        working-directory: Backend
+        run: npm run check-error-handler
+
       - name: Generate Prisma Client
         working-directory: Backend
         run: npx prisma generate

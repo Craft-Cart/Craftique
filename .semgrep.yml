@@ -445,3 +445,135 @@ rules:
     message: "Missing console redaction: Console transport should include redaction formatter to prevent credential leaks in stdout. Add redactSensitive() before other formatters."
     severity: ERROR
     languages: [typescript, javascript]
+
+  # ============================================
+  # Database Schema Leak Prevention
+  # ============================================
+  - id: db-schema-leak-prisma-error
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            message: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development' || $ENV !== 'production') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: prismaError
+            - pattern: $PRISMA_ERROR
+            - pattern: err
+    message: "Database schema leak risk: Prisma/database error messages may contain table names, column names, or constraint names. Return generic error messages in production. Use error handler that sanitizes Prisma errors."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: db-schema-leak-error-message
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            error: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            error: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: err
+            - pattern: error
+            - pattern: $ERROR
+    message: "Database schema leak risk: Error messages may contain database schema information (table names, column names, SQL syntax). Return generic error messages in production."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: db-schema-leak-prisma-meta
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            meta: $PRISMA_ERROR.meta,
+            ...
+          })
+      - pattern: |
+          res.status($CODE).json($PRISMA_ERROR.meta)
+    message: "Database schema leak: Prisma error meta contains database schema information (table names, column names, constraints). Never expose meta field to clients."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: missing-global-error-handler
+    patterns:
+      - pattern: |
+          const app = express()
+          ...
+      - pattern-not: |
+          app.use($ERROR_HANDLER)
+      - pattern-not: |
+          app.use(errorHandler)
+    message: "Missing global error handler: Express app should have a global error handler middleware as the last middleware to catch all errors and prevent schema leaks. Add: app.use(errorHandler);"
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: prisma-error-not-handled
+    patterns:
+      - pattern: |
+          try {
+            ...
+            await prisma.$MODEL.$METHOD(...)
+            ...
+          } catch ($ERR) {
+            ...
+            res.status($CODE).json({
+              message: $ERR.message,
+              ...
+            })
+          }
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+    message: "Prisma error not sanitized: Catching Prisma errors and returning error.message directly may leak database schema. Use global error handler or sanitize Prisma errors before returning to client."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-error-exposure
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            message: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: err
+            - pattern: error
+            - pattern: $ERROR
+    message: "SQL error exposure risk: Error messages containing SQL syntax, table names, or column names should not be exposed to clients. Return generic error messages in production."
+    severity: WARNING
+    languages: [typescript, javascript]
