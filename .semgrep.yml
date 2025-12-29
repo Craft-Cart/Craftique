@@ -87,3 +87,21 @@ rules:
     message: "Potential data leakage: Querying user-specific data without filtering by current user. Add user_id or owner_id filter to prevent unauthorized access."
     severity: WARNING
     languages: [typescript, javascript]
+
+  - id: prohibited-ddl-operations
+    patterns:
+      - pattern: $queryRaw("...DROP...")
+      - pattern: $queryRaw("...ALTER...")
+      - pattern: $queryRaw("...CREATE TABLE...")
+      - pattern: $queryRaw("...CREATE INDEX...")
+      - pattern: $queryRaw("...DROP TABLE...")
+      - pattern: $queryRaw("...ALTER TABLE...")
+      - pattern: $executeRaw("...DROP...")
+      - pattern: $executeRaw("...ALTER...")
+      - pattern: $executeRaw("...CREATE TABLE...")
+      - pattern: $executeRaw("...CREATE INDEX...")
+      - pattern: $executeRaw("...DROP TABLE...")
+      - pattern: $executeRaw("...ALTER TABLE...")
+    message: "Prohibited DDL operations detected: Application code should not perform DDL operations (DROP, ALTER, CREATE TABLE, etc.) as this violates the principle of least privilege. Database schema changes should be handled through migrations only."
+    severity: ERROR
+    languages: [typescript, javascript]
