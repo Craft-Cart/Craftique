@@ -25,6 +25,19 @@ rules:
     severity: ERROR
     languages: [typescript, javascript]
 
+  - id: insecure-cookie-settings
+    patterns:
+      - pattern: res.cookie($NAME, $VALUE, $OPTIONS)
+      - pattern-not-inside: |
+          httpOnly: true
+      - pattern-not-inside: |
+          secure: true
+      - pattern-not-inside: |
+          sameSite: 'strict'
+    message: "Insecure cookie settings: Cookies should be set with httpOnly: true, secure: true, and sameSite: 'strict' to prevent XSS and CSRF attacks. Use setAuthCookie() helper for JWT tokens."
+    severity: ERROR
+    languages: [typescript, javascript]
+
   - id: missing-ownership-check
     patterns:
       - pattern: |
