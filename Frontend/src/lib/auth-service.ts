@@ -13,38 +13,70 @@ export class AuthService {
   /**
    * Sync Auth0 user with backend database
    * Call this after successful Auth0 login
-   * Uses Next.js API route for server-side token access
+   * Gets access token and verifies with backend directly
    */
   async syncUser(auth0User?: Auth0User): Promise<User> {
     console.log('[AuthService] syncUser - Syncing user with backend');
     try {
-      const response = await fetch('/api/auth/sync', {
-        method: 'POST',
-        credentials: 'include',
+      // Get access token from Auth0
+      console.log('[AuthService] syncUser - Getting access token from Auth0');
+      const token = await this.getAuthToken();
+
+      if (!token) {
+        console.log('[AuthService] syncUser - No token available');
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login'
+        }
+        throw new Error('No access token available')
+      }
+      console.log('[AuthService] syncUser - Access token obtained');
+
+      // Sync user with backend
+      const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+      console.log('[AuthService] syncUser - Syncing user with backend:', backendUrl);
+      const response = await fetch(`${backendUrl}/auth/verify`, {
+        method: 'GET',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      })
+      });
 
       if (!response.ok) {
-        console.log('[AuthService] syncUser - Sync failed with status:', response.status);
-        if (response.redirected || response.status === 401) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log('[AuthService] syncUser - Backend sync failed:', errorData);
+        
+        if (response.status === 401) {
           if (typeof window !== 'undefined') {
             window.location.href = '/auth/login'
           }
           throw new Error('Session expired - redirecting to login')
         }
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(`Failed to sync user: ${errorData.error || response.statusText}`)
+        
+        throw new Error(`Failed to sync user with backend: ${errorData.error || response.statusText}`)
       }
 
-      const data = await response.json()
+      const data = await response.json();
+      console.log('[AuthService] syncUser - User synced successfully:', data.user?.email);
+
       this.currentUser = data.user
       this.roleCache.set(data.user.email, data.user.role)
-      console.log('[AuthService] syncUser - User synced successfully:', data.user.email);
       return data.user
-    } catch (error) {
+    } catch (error: any) {
       console.error('[AuthService] syncUser - Error syncing user:', error);
+      
+      // Handle session expiration errors
+      if (error?.code === 'missing_refresh_token' ||
+          error?.code === 'invalid_grant' ||
+          error?.message?.includes('access token has expired') ||
+          error?.message?.includes('Session expired')) {
+        console.log('[AuthService] syncUser - Session expired, redirecting to login');
+        if (typeof window !== 'undefined') {
+          window.location.href = '/auth/login'
+        }
+        throw new Error('Session expired - redirecting to login')
+      }
+      
       if (error instanceof TypeError && error.message?.includes('fetch')) {
         if (typeof window !== 'undefined') {
           window.location.href = '/auth/login'
