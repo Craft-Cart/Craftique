@@ -243,7 +243,7 @@ model PaymobTransaction {
 model ProductVariant {
   id          String   @id @default(uuid())
   item_id     String
-  name        String
+  title        String
   sku         String?  @unique
   price       Decimal  @db.Decimal(10, 2)
   quantity    Int      @default(0)
