@@ -453,13 +453,13 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
         volumes:
-          - ${{ github.workspace }}/Backend/prisma-init:/docker-entrypoint-initdb.d
+          - /tmp/prisma-init:/docker-entrypoint-initdb.d
 
     steps:
       - name: Fix permissions for prisma-init
-        run: sudo chown -R $USER:$USER Backend/prisma-init || true
+        run: sudo chown -R $USER:$USER /tmp/prisma-init || true
       - name: Remove temp folder
-        run: rm -rf Backend/prisma-init || true
+        run: rm -rf /tmp/prisma-init || true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -468,8 +468,8 @@ jobs:
 
       - name: Prepare prisma init folder
         run: |
-          mkdir -p Backend/prisma-init
-          cp -r Backend/prisma/* Backend/prisma-init/
+          mkdir -p /tmp/prisma-init
+          cp -r Backend/prisma/* /tmp/prisma-init/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
