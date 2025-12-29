@@ -446,17 +446,19 @@ jobs:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
         volumes:
-          - ${{ github.workspace }}/Backend/prisma:/docker-entrypoint-initdb.d
-
+          - ${{ github.workspace }}/Backend/prisma-init:/docker-entrypoint-initdb.d
 
     steps:
-      - name: Ensure prisma directory is writable
-        run: chmod -R 777 Backend/prisma || true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           clean: true
+
+      - name: Prepare prisma init folder
+        run: |
+          mkdir -p Backend/prisma-init
+          cp -r Backend/prisma/* Backend/prisma-init/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -497,7 +499,6 @@ jobs:
           echo "## 🔐 Database Role Permission Check" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          # Check if craftique_app role exists
           ROLE_EXISTS=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT 1 FROM pg_roles WHERE rolname = 'craftique_app';")
           if [ -z "$ROLE_EXISTS" ]; then
             echo "❌ ERROR: craftique_app role does not exist" >> $GITHUB_STEP_SUMMARY
@@ -505,15 +506,13 @@ jobs:
           fi
           echo "✅ craftique_app role exists" >> $GITHUB_STEP_SUMMARY
 
-          # Check if role has CONNECT permission on database
           CONNECT_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_database_privilege('craftique_app', 'craftique', 'CONNECT');")
           if [ "$CONNECT_PERM" != "t" ]; then
-            echo "❌ ERROR: craftique_app lacks CONNECT permission on database" >> $GITHUB_STEP_SUMMARY
+            echo "❌ ERROR: craftique_app lacks CONNECT permission" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ craftique_app has CONNECT permission" >> $GITHUB_STEP_SUMMARY
 
-          # Check if role has USAGE on schema
           USAGE_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_schema_privilege('craftique_app', 'public', 'USAGE');")
           if [ "$USAGE_PERM" != "t" ]; then
             echo "❌ ERROR: craftique_app lacks USAGE permission on public schema" >> $GITHUB_STEP_SUMMARY
@@ -521,7 +520,6 @@ jobs:
           fi
           echo "✅ craftique_app has USAGE permission on public schema" >> $GITHUB_STEP_SUMMARY
 
-          # Check if role has SELECT, INSERT, UPDATE, DELETE on tables
           TABLE_PERMS=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "
             SELECT
               CASE WHEN has_table_privilege('craftique_app', 'public.\"User\"', 'SELECT') THEN 1 ELSE 0 END +
@@ -534,15 +532,14 @@ jobs:
             echo "❌ ERROR: craftique_app lacks full CRUD permissions on tables" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          echo "✅ craftique_app has SELECT, INSERT, UPDATE, DELETE on tables" >> $GITHUB_STEP_SUMMARY
+          echo "✅ craftique_app has full CRUD permissions on tables" >> $GITHUB_STEP_SUMMARY
 
-          # Check that role does NOT have CREATE permission on schema
           CREATE_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_schema_privilege('craftique_app', 'public', 'CREATE');")
           if [ "$CREATE_PERM" = "t" ]; then
             echo "❌ ERROR: craftique_app should NOT have CREATE permission on schema" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
-          echo "✅ craftique_app correctly lacks CREATE permission on schema" >> $GITHUB_STEP_SUMMARY
+          echo "✅ craftique_app correctly lacks CREATE permission" >> $GITHUB_STEP_SUMMARY
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Database role security check passed!** 🎉" >> $GITHUB_STEP_SUMMARY
@@ -561,6 +558,7 @@ jobs:
           name: zap-report
           path: report_html.html
           retention-days: 14
+
 
   # ============================================
   # Stage 6: Security Gate & PR Comment
