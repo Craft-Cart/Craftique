@@ -1,0 +1,6 @@
+# .gitignore
+.terraform/           # The plugins (huge binaries)
+*.tfstate             # YOUR INFRASTRUCTURE MEMORY (Contains sensitive IPs/IDs)
+*.tfstate.backup
+*.tfvars              # Your secrets (passwords/keys)
+.terraform.lock.hcl   # (Optional, some teams commit this, some don't)
