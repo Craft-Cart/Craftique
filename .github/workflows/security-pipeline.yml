@@ -52,8 +52,6 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect \
             --source="/repo" \
-            --branch="${GITHUB_REF_NAME}" \
-            --since-commit="${{ github.event.pull_request.base.sha }}" \
             --verbose \
             --redact \
             --exit-code 1
@@ -75,9 +73,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
 
       - name: Run Semgrep SAST
         uses: semgrep/semgrep-action@v1
@@ -237,9 +232,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -317,9 +309,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -702,9 +691,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          clean: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
