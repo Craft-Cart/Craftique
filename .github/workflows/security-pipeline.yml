@@ -217,6 +217,10 @@ jobs:
         working-directory: Backend
         run: npm run check-db-constraints
 
+      - name: Check log redaction configuration
+        working-directory: Backend
+        run: npm run check-log-redaction
+
       - name: Generate Prisma Client
         working-directory: Backend
         run: npx prisma generate

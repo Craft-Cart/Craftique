@@ -339,3 +339,109 @@ rules:
     message: "Potential data leakage: Querying user-specific data without filtering by current user. Add user_id or owner_id filter to prevent unauthorized access."
     severity: WARNING
     languages: [typescript, javascript]
+
+  # ============================================
+  # Credential Leak in Logs Prevention
+  # ============================================
+  - id: credential-leak-direct-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, { ...$DATA })
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern-either:
+            - pattern: password: $VAL
+            - pattern: token: $VAL
+            - pattern: refresh_token: $VAL
+            - pattern: access_token: $VAL
+            - pattern: authorization: $VAL
+            - pattern: cvv: $VAL
+            - pattern: credit_card: $VAL
+            - pattern: secret: $VAL
+            - pattern: api_key: $VAL
+            - pattern: apiKey: $VAL
+    message: "Credential leak risk: Directly logging sensitive fields (password, token, etc.) without redaction. Ensure logger is configured with redaction formatter. Use logger from utils/logger.ts which has redaction enabled."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: credential-leak-req-body-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, req.body)
+      - pattern: |
+          logger.$LEVEL($MSG, { body: req.body })
+      - pattern: |
+          logger.$LEVEL($MSG, { ...req.body })
+    message: "Credential leak risk: Logging req.body directly may expose passwords, tokens, and other sensitive data. Use logger with redaction or manually exclude sensitive fields."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: credential-leak-req-headers-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, req.headers)
+      - pattern: |
+          logger.$LEVEL($MSG, { headers: req.headers })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+          }
+    message: "Credential leak risk: Logging req.headers may expose Authorization tokens. Ensure logger has redaction configured or exclude Authorization header manually."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: credential-leak-console-logging
+    patterns:
+      - pattern: |
+          console.log($DATA)
+      - pattern: |
+          console.error($DATA)
+      - pattern: |
+          console.info($DATA)
+      - pattern: |
+          console.warn($DATA)
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern-either:
+            - pattern: req.body
+            - pattern: req.headers
+            - pattern: { password: $VAL }
+            - pattern: { token: $VAL }
+            - pattern: { ...req.body }
+    message: "Credential leak risk: Using console.log/error/info/warn with sensitive data. Use logger from utils/logger.ts instead, which has redaction configured. Never use console.* for logging in production."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: logger-missing-redaction
+    patterns:
+      - pattern: |
+          winston.createLogger({
+            ...
+            format: winston.format.combine(
+              ...
+            ),
+            ...
+          })
+      - pattern-not-inside: |
+          redactSensitive()
+      - pattern-not-inside: |
+          redact
+    message: "Missing log redaction: Winston logger should include redaction formatter to mask sensitive fields (password, token, etc.) before writing to stdout or files. Add redactSensitive() formatter."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: console-transport-missing-redaction
+    patterns:
+      - pattern: |
+          new winston.transports.Console({
+            format: winston.format.combine(
+              ...
+            )
+          })
+      - pattern-not-inside: |
+          redactSensitive()
+      - pattern-not-inside: |
+          redact
+    message: "Missing console redaction: Console transport should include redaction formatter to prevent credential leaks in stdout. Add redactSensitive() before other formatters."
+    severity: ERROR
+    languages: [typescript, javascript]
