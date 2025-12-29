@@ -487,7 +487,7 @@ jobs:
           npx prisma db push --accept-data-loss
           NODE_ENV=production node dist/server.js &
         env:
-          DATABASE_URL: postgresql://craftique_app:craftique_app_password_change_in_production@localhost:5432/craftique?schema=public
+          DATABASE_URL: postgresql://craftique_app:craftique_app_password_change_in_production@postgres:5432/craftique?schema=public
           PORT: 8000
           JWT_SECRET: test-secret
           COOKIE_SECRET: test-cookie
