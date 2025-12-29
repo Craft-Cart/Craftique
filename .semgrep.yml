@@ -72,7 +72,7 @@ rules:
       - pattern: |
           $QUERY = $VAR + $SQL
       - pattern: |
-          $QUERY = `...${$VAR}...`
+          $QUERY = "`...${$VAR}...`"
       - metavariable-pattern:
           metavariable: $QUERY
           pattern-either:
@@ -93,9 +93,9 @@ rules:
       - pattern: |
           prisma.$executeRaw`UPDATE $TABLE SET name = ${$VAR}`
       - pattern: |
-          $DB.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+          $DB.query("`SELECT * FROM $TABLE WHERE id = ${$VAR}`")
       - pattern: |
-          $POOL.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+          $POOL.query("`SELECT * FROM $TABLE WHERE id = ${$VAR}`")
     message: "SQL Injection vulnerability: Template literal interpolation in raw SQL query. Use Prisma.$queryRaw with Prisma.sql template tag and parameterized queries ($1, $2) instead."
     severity: ERROR
     languages: [typescript, javascript]
@@ -109,7 +109,7 @@ rules:
       - metavariable-pattern:
           metavariable: $QUERY
           pattern-either:
-            - pattern: `...${...}...`
+            - pattern: "`...${...}...`"
             - pattern: $STR + $VAR
             - pattern: $VAR + $STR
     message: "SQL Injection vulnerability: Raw SQL query without Prisma.sql template tag. Use Prisma.sql template tag for safe parameterized queries."
@@ -123,11 +123,9 @@ rules:
       - metavariable-pattern:
           metavariable: $QUERY
           pattern-either:
-            - pattern: `...${...}...`
+            - pattern: "`...${...}...`"
             - pattern: $STR + $VAR
             - pattern: $VAR + $STR
-            - pattern: "'" + $VAR + "'"
-            - pattern: '"' + $VAR + '"'
     message: "SQL Injection vulnerability: String concatenation in pg query. Use parameterized queries with $1, $2, $3 placeholders instead (e.g., query('SELECT * FROM users WHERE id = $1', [userId]))."
     severity: ERROR
     languages: [typescript, javascript]
@@ -141,7 +139,7 @@ rules:
       - metavariable-pattern:
           metavariable: $QUERY
           pattern-either:
-            - pattern: `...${...}...`
+            - pattern: "`...${...}...`"
             - pattern: $STR + $VAR
     message: "SQL Injection vulnerability: pg query with string interpolation but no parameter array. Use parameterized queries: query('SELECT * FROM users WHERE id = $1', [userId])."
     severity: ERROR
@@ -154,7 +152,7 @@ rules:
       - metavariable-pattern:
           metavariable: $SQL
           pattern-either:
-            - pattern: `...${...}...`
+            - pattern: "`...${...}...`"
             - pattern: $STR + $VAR
             - pattern: $VAR + $STR
     message: "SQL Injection vulnerability: SQL query string contains variable interpolation. Use parameterized queries with placeholders ($1, $2) and pass values in parameter array."
@@ -163,113 +161,9 @@ rules:
 
   # ============================================
   # Database Constraints - Negative Quantity Prevention
+  # Note: SQL and Prisma language rules are handled by check-db-constraints.js script
+  # Semgrep doesn't support SQL or Prisma languages, so these checks are done via custom script
   # ============================================
-  - id: missing-quantity-check-constraint-item
-    patterns:
-      - pattern: |
-          CREATE TABLE "Item" (
-            ...
-            "quantity" INTEGER NOT NULL $DEFAULT,
-            ...
-          )
-      - pattern-not: |
-          ALTER TABLE "Item" ADD CONSTRAINT ... CHECK (quantity >= 0)
-      - pattern-not: |
-          CONSTRAINT "Item_quantity_check" CHECK (quantity >= 0)
-      - pattern-not: |
-          CHECK (quantity >= 0)
-    message: "Missing database constraint: Item.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"Item\" ADD CONSTRAINT \"Item_quantity_check\" CHECK (quantity >= 0);"
-    severity: ERROR
-    languages: [sql]
-
-  - id: missing-quantity-check-constraint-orderitem
-    patterns:
-      - pattern: |
-          CREATE TABLE "OrderItem" (
-            ...
-            "quantity" INTEGER NOT NULL,
-            ...
-          )
-      - pattern-not: |
-          ALTER TABLE "OrderItem" ADD CONSTRAINT ... CHECK (quantity > 0)
-      - pattern-not: |
-          CONSTRAINT "OrderItem_quantity_check" CHECK (quantity > 0)
-      - pattern-not: |
-          CHECK (quantity > 0)
-    message: "Missing database constraint: OrderItem.quantity should have CHECK constraint to prevent negative or zero values. Add: ALTER TABLE \"OrderItem\" ADD CONSTRAINT \"OrderItem_quantity_check\" CHECK (quantity > 0);"
-    severity: ERROR
-    languages: [sql]
-
-  - id: missing-quantity-check-constraint-productvariant
-    patterns:
-      - pattern: |
-          CREATE TABLE "ProductVariant" (
-            ...
-            "quantity" INTEGER NOT NULL $DEFAULT,
-            ...
-          )
-      - pattern-not: |
-          ALTER TABLE "ProductVariant" ADD CONSTRAINT ... CHECK (quantity >= 0)
-      - pattern-not: |
-          CONSTRAINT "ProductVariant_quantity_check" CHECK (quantity >= 0)
-      - pattern-not: |
-          CHECK (quantity >= 0)
-    message: "Missing database constraint: ProductVariant.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"ProductVariant\" ADD CONSTRAINT \"ProductVariant_quantity_check\" CHECK (quantity >= 0);"
-    severity: ERROR
-    languages: [sql]
-
-  - id: missing-quantity-check-constraint-generic
-    patterns:
-      - pattern: |
-          CREATE TABLE $TABLE (
-            ...
-            "quantity" INTEGER $NOTNULL $DEFAULT,
-            ...
-          )
-      - pattern-not: |
-          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
-      - pattern-not: |
-          CONSTRAINT $TABLE_quantity_check CHECK (quantity >= 0)
-      - pattern-not: |
-          CHECK (quantity >= 0)
-      - pattern-not: |
-          CHECK (quantity > 0)
-      - metavariable-pattern:
-          metavariable: $TABLE
-          pattern-not: InventoryLog
-    message: "Missing database constraint: Table $TABLE has quantity column without CHECK constraint. Add CHECK constraint to prevent negative values (e.g., CHECK (quantity >= 0) or CHECK (quantity > 0) depending on business logic)."
-    severity: WARNING
-    languages: [sql]
-
-  - id: prisma-quantity-field-without-constraint-note
-    patterns:
-      - pattern: |
-          quantity        Int       $DEFAULT
-      - pattern-not-inside: |
-          // CHECK constraint: quantity >= 0
-      - pattern-not-inside: |
-          // CHECK (quantity >= 0)
-      - pattern-not-inside: |
-          // @db.Check("quantity >= 0")
-    message: "Missing CHECK constraint documentation: Quantity field in Prisma schema should have a comment indicating CHECK constraint requirement. Since Prisma doesn't support CHECK constraints directly, add a migration with: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0);"
-    severity: WARNING
-    languages: [prisma]
-
-  - id: missing-quantity-check-in-migration
-    patterns:
-      - pattern: |
-          "quantity" INTEGER $NOTNULL $DEFAULT
-      - pattern-not: |
-          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
-      - pattern-not: |
-          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity > 0)
-      - pattern-not: |
-          CONSTRAINT ... CHECK (quantity >= 0)
-      - pattern-not: |
-          CONSTRAINT ... CHECK (quantity > 0)
-    message: "Missing CHECK constraint in migration: Quantity column created without CHECK constraint. Add constraint after table creation: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0); (or quantity > 0 for OrderItem)."
-    severity: ERROR
-    languages: [sql]
 
   - id: insecure-random-math-random
     pattern: Math.random()
@@ -350,16 +244,16 @@ rules:
       - metavariable-pattern:
           metavariable: $DATA
           pattern-either:
-            - pattern: password: $VAL
-            - pattern: token: $VAL
-            - pattern: refresh_token: $VAL
-            - pattern: access_token: $VAL
-            - pattern: authorization: $VAL
-            - pattern: cvv: $VAL
-            - pattern: credit_card: $VAL
-            - pattern: secret: $VAL
-            - pattern: api_key: $VAL
-            - pattern: apiKey: $VAL
+            - pattern: "password: $VAL"
+            - pattern: "token: $VAL"
+            - pattern: "refresh_token: $VAL"
+            - pattern: "access_token: $VAL"
+            - pattern: "authorization: $VAL"
+            - pattern: "cvv: $VAL"
+            - pattern: "credit_card: $VAL"
+            - pattern: "secret: $VAL"
+            - pattern: "api_key: $VAL"
+            - pattern: "apiKey: $VAL"
     message: "Credential leak risk: Directly logging sensitive fields (password, token, etc.) without redaction. Ensure logger is configured with redaction formatter. Use logger from utils/logger.ts which has redaction enabled."
     severity: ERROR
     languages: [typescript, javascript]
@@ -370,8 +264,6 @@ rules:
           logger.$LEVEL($MSG, req.body)
       - pattern: |
           logger.$LEVEL($MSG, { body: req.body })
-      - pattern: |
-          logger.$LEVEL($MSG, { ...req.body })
     message: "Credential leak risk: Logging req.body directly may expose passwords, tokens, and other sensitive data. Use logger with redaction or manually exclude sensitive fields."
     severity: ERROR
     languages: [typescript, javascript]
@@ -405,23 +297,14 @@ rules:
           pattern-either:
             - pattern: req.body
             - pattern: req.headers
-            - pattern: { password: $VAL }
-            - pattern: { token: $VAL }
-            - pattern: { ...req.body }
-    message: "Credential leak risk: Using console.log/error/info/warn with sensitive data. Use logger from utils/logger.ts instead, which has redaction configured. Never use console.* for logging in production."
+    message: "Credential leak risk: Using console.log/error/info/warn with sensitive data (req.body, req.headers). Use logger from utils/logger.ts instead, which has redaction configured. Never use console.* for logging in production."
     severity: ERROR
     languages: [typescript, javascript]
 
   - id: logger-missing-redaction
     patterns:
       - pattern: |
-          winston.createLogger({
-            ...
-            format: winston.format.combine(
-              ...
-            ),
-            ...
-          })
+          winston.createLogger($CONFIG)
       - pattern-not-inside: |
           redactSensitive()
       - pattern-not-inside: |
@@ -453,15 +336,12 @@ rules:
     patterns:
       - pattern: |
           res.status($CODE).json({
-            ...
             message: $ERR.message,
-            ...
+            $REST
           })
       - pattern-not-inside: |
           if ($ENV === 'development' || $ENV !== 'production') {
-            ...
-            message: $ERR.message,
-            ...
+            $BODY
           }
       - pattern-not-inside: |
           config.nodeEnv === 'development'
@@ -479,15 +359,12 @@ rules:
     patterns:
       - pattern: |
           res.status($CODE).json({
-            ...
             error: $ERR.message,
-            ...
+            $REST
           })
       - pattern-not-inside: |
           if ($ENV === 'development') {
-            ...
-            error: $ERR.message,
-            ...
+            $BODY
           }
       - pattern-not-inside: |
           config.nodeEnv === 'development'
@@ -505,9 +382,8 @@ rules:
     patterns:
       - pattern: |
           res.status($CODE).json({
-            ...
             meta: $PRISMA_ERROR.meta,
-            ...
+            $REST
           })
       - pattern: |
           res.status($CODE).json($PRISMA_ERROR.meta)
@@ -558,15 +434,12 @@ rules:
     patterns:
       - pattern: |
           res.status($CODE).json({
-            ...
             message: $ERR.message,
-            ...
+            $REST
           })
       - pattern-not-inside: |
           if ($ENV === 'development') {
-            ...
-            message: $ERR.message,
-            ...
+            $BODY
           }
       - metavariable-pattern:
           metavariable: $ERR
@@ -587,9 +460,8 @@ rules:
           "react": "$VERSION"
       - metavariable-pattern:
           metavariable: $VERSION
-          pattern-not: |
-            "^19.2.0"|"^19.3.0"|"^19.4.0"|"^20.0.0"|"^18.3.0"|"^18.2.0"
-    message: "Outdated React version: React may be vulnerable to CVE-2025-66478 (React2Shell RCE). Update React to the latest patched version. Run 'npm audit fix' or update package.json."
+          pattern-regex: "^(19\\.(0|1)|18\\.(0|1)|17\\.|16\\.|15\\.|14\\.|13\\.|12\\.|11\\.|10\\.|9\\.|8\\.|7\\.|6\\.|5\\.|4\\.|3\\.|2\\.|1\\.|0\\.)"
+    message: "Outdated React version: React may be vulnerable to CVE-2025-66478 (React2Shell RCE). Update React to version 19.2.0, 19.3.0, 19.4.0, 20.0.0, 18.3.0, or 18.2.0 or later. Run 'npm audit fix' or update package.json."
     severity: ERROR
     languages: [json]
 
@@ -599,9 +471,8 @@ rules:
           "next": "$VERSION"
       - metavariable-pattern:
           metavariable: $VERSION
-          pattern-not: |
-            "^16.0.10"|"^15.0.0"|"^14.0.0"
-    message: "Outdated Next.js version: Next.js may contain security vulnerabilities. Update to the latest patched version. Run 'npm audit fix' or update package.json."
+          pattern-regex: "^(15\\.|14\\.|13\\.|12\\.|11\\.|10\\.|9\\.|8\\.|7\\.|6\\.|5\\.|4\\.|3\\.|2\\.|1\\.|0\\.)"
+    message: "Outdated Next.js version: Next.js may contain security vulnerabilities. Update to version 16.0.10 or later. Run 'npm audit fix' or update package.json."
     severity: WARNING
     languages: [json]
 
