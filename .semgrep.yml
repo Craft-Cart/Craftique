@@ -22,3 +22,36 @@ rules:
     message: "Insecure random number generation: Math.random() is not cryptographically secure. Use crypto.randomBytes() for security tokens, passwords, or any security-sensitive operations."
     severity: ERROR
     languages: [typescript, javascript]
+
+  - id: missing-ownership-check
+    patterns:
+      - pattern: |
+          $RESOURCE = await $REPO.findById($ID)
+          ...
+          return $RESOURCE
+      - pattern-not: |
+          if ($RESOURCE.owner_id !== req.user.id) {
+            ...
+          }
+      - pattern-not: |
+          requireOwnership()
+    message: "Potential authorization bypass: Returning resource data without verifying ownership (resource.owner_id === req.user.id). Ensure proper authorization checks before returning sensitive data."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: missing-user-filter-query
+    patterns:
+      - pattern: prisma.$MODEL.findMany(...)
+      - pattern-not-inside: |
+          where: {
+            user_id: req.user.id,
+            ...
+          }
+      - pattern-not-inside: |
+          where: {
+            owner_id: req.user.id,
+            ...
+          }
+    message: "Potential data leakage: Querying user-specific data without filtering by current user. Add user_id or owner_id filter to prevent unauthorized access."
+    severity: WARNING
+    languages: [typescript, javascript]
