@@ -449,6 +449,8 @@ jobs:
           - ${{ github.workspace }}/Backend/prisma-init:/docker-entrypoint-initdb.d
 
     steps:
+      - name: Remove prisma-init folder
+        run: sudo rm -rf Backend/prisma-init || true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
