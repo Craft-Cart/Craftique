@@ -76,8 +76,24 @@ jobs:
       - name: Run Semgrep SAST
         uses: semgrep/semgrep-action@v1
         with:
-          config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
+          config: p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
           baseline-ref: ""
+
+      - name: Run Our Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: .semgrep.yml
+          baseline-ref: ""
+          output: semgrep-custom-results.json
+        continue-on-error: true
+
+      - name: Upload Custom Semgrep Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-semgrep-results
+          path: semgrep-custom-results.json
+          retention-days: 30
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
@@ -488,16 +504,66 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            // Read custom Semgrep results
+            let customFindings = { results: [] };
+            try {
+              const fs = require('fs');
+              if (fs.existsSync('semgrep-custom-results.json')) {
+                const data = fs.readFileSync('semgrep-custom-results.json', 'utf8');
+                customFindings = JSON.parse(data);
+              }
+            } catch (error) {
+              console.log('Could not read custom Semgrep results:', error.message);
+            }
+
+            // Count findings by severity
+            const findings = customFindings.results || [];
+            const errorCount = findings.filter(f => f.extra.severity === 'ERROR').length;
+            const warningCount = findings.filter(f => f.extra.severity === 'WARNING').length;
+            const infoCount = findings.filter(f => f.extra.severity === 'INFO').length;
+
+            // Create detailed comment
+            let comment = `## 🛡️ Security Summary
+            | Check | Status |
+            |-------|--------|
+            | Secrets Scan | ${{ needs.security-quick-scan.result == 'success' && '✅' || '❌' }} |
+            | SAST/SCA | ${{ needs.code-analysis.result == 'success' && '✅' || '⚠️' }} |
+            | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |
+
+            ### 📋 Custom Security Rules Results
+            | Severity | Count |
+            |----------|-------|
+            | Errors | ${errorCount} |
+            | Warnings | ${warningCount} |
+            | Info | ${infoCount} |`;
+
+            if (findings.length > 0) {
+              comment += '\n\n### 🚨 Custom Security Findings\n';
+              comment += '| Rule | File | Line | Message |\n';
+              comment += '|------|------|------|---------|\n';
+
+              findings.slice(0, 10).forEach(finding => {
+                const rule = finding.check_id.split('.').pop();
+                const file = finding.path.split('/').pop();
+                const line = finding.start.line;
+                const message = finding.extra.message.substring(0, 80) + (finding.extra.message.length > 80 ? '...' : '');
+                comment += `| ${rule} | ${file} | ${line} | ${message} |\n`;
+              });
+
+              if (findings.length > 10) {
+                comment += `\n*... and ${findings.length - 10} more findings*\n`;
+              }
+
+              comment += '\n📎 **Full results available in:** `custom-semgrep-results` artifact\n';
+            } else {
+              comment += '\n✅ **No custom security rule violations found!**\n';
+            }
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🛡️ Security Summary
-              | Check | Status |
-              |-------|--------|
-              | Secrets Scan | ${{ needs.security-quick-scan.result == 'success' && '✅' || '❌' }} |
-              | SAST/SCA | ${{ needs.code-analysis.result == 'success' && '✅' || '⚠️' }} |
-              | Build & Test | ${{ needs.build-and-test.result == 'success' && '✅' || '❌' }} |`
+              body: comment
             });
 
   # ============================================
