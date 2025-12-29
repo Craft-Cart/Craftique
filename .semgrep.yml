@@ -1,4 +1,7 @@
 rules:
+  # ============================================
+  # Mass Assignment Detection Rules
+  # ============================================
   - id: mass-assignment-prisma-update
     patterns:
       - pattern:  "$PRISMA.$MODEL.update({ data: $DATA, ... })"
@@ -18,6 +21,255 @@ rules:
     message: "Potential mass assignment vulnerability: Passing req.body directly to update method. Use manual destructuring instead."
     severity: WARNING
     languages: [typescript, javascript]
+
+  - id: mass-assignment-prisma-update-spread
+    patterns:
+      - pattern: "$PRISMA.$MODEL.update({ data: { ...$SPREAD }, ... })"
+      - metavariable-pattern:
+          metavariable: $SPREAD
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Using spread operator with req.body in Prisma update. Manually destructure specific fields instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-prisma-create
+    patterns:
+      - pattern: "$PRISMA.$MODEL.create({ data: $DATA, ... })"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Using req.body directly in Prisma create. Manually destructure inputs to prevent mass assignment."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-repository-update
+    patterns:
+      - pattern: "$REPO.update($ID, $DATA)"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Passing req.body directly to repository update method. Manually destructure inputs (e.g., { name: req.body.name }) instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: mass-assignment-service-update
+    patterns:
+      - pattern: "$SERVICE.update($ID, $DATA)"
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern: req.body
+    message: "Potential mass assignment vulnerability: Passing req.body directly to service update method. Manually destructure inputs instead."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  # ============================================
+  # SQL Injection Detection Rules
+  # ============================================
+  - id: sql-injection-raw-query-string-concat
+    patterns:
+      - pattern: |
+          $QUERY = $SQL + $VAR
+      - pattern: |
+          $QUERY = $VAR + $SQL
+      - pattern: |
+          $QUERY = `...${$VAR}...`
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: prisma.$queryRaw(...)
+            - pattern: prisma.$executeRaw(...)
+            - pattern: $DB.query(...)
+            - pattern: $DB.execute(...)
+            - pattern: $POOL.query(...)
+            - pattern: $CLIENT.query(...)
+    message: "SQL Injection vulnerability: String concatenation in SQL query detected. Use parameterized queries with $1, $2 syntax (pg) or ORM binding instead of string concatenation."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-template-literal-raw
+    patterns:
+      - pattern: |
+          prisma.$queryRaw`SELECT * FROM $TABLE WHERE id = ${$VAR}`
+      - pattern: |
+          prisma.$executeRaw`UPDATE $TABLE SET name = ${$VAR}`
+      - pattern: |
+          $DB.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+      - pattern: |
+          $POOL.query(`SELECT * FROM $TABLE WHERE id = ${$VAR}`)
+    message: "SQL Injection vulnerability: Template literal interpolation in raw SQL query. Use Prisma.$queryRaw with Prisma.sql template tag and parameterized queries ($1, $2) instead."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-prisma-raw-without-sql-tag
+    patterns:
+      - pattern: |
+          prisma.$queryRaw($QUERY)
+      - pattern-not-inside: |
+          Prisma.sql`...`
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+    message: "SQL Injection vulnerability: Raw SQL query without Prisma.sql template tag. Use Prisma.sql template tag for safe parameterized queries."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-pg-query-string-concat
+    patterns:
+      - pattern: |
+          $CLIENT.query($QUERY, ...)
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+            - pattern: "'" + $VAR + "'"
+            - pattern: '"' + $VAR + '"'
+    message: "SQL Injection vulnerability: String concatenation in pg query. Use parameterized queries with $1, $2, $3 placeholders instead (e.g., query('SELECT * FROM users WHERE id = $1', [userId]))."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-pg-query-missing-params
+    patterns:
+      - pattern: |
+          $CLIENT.query($QUERY)
+      - pattern-not: |
+          $CLIENT.query($QUERY, [$PARAMS])
+      - metavariable-pattern:
+          metavariable: $QUERY
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+    message: "SQL Injection vulnerability: pg query with string interpolation but no parameter array. Use parameterized queries: query('SELECT * FROM users WHERE id = $1', [userId])."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-injection-raw-sql-with-vars
+    patterns:
+      - pattern: |
+          $DB.query($SQL, $VARS)
+      - metavariable-pattern:
+          metavariable: $SQL
+          pattern-either:
+            - pattern: `...${...}...`
+            - pattern: $STR + $VAR
+            - pattern: $VAR + $STR
+    message: "SQL Injection vulnerability: SQL query string contains variable interpolation. Use parameterized queries with placeholders ($1, $2) and pass values in parameter array."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  # ============================================
+  # Database Constraints - Negative Quantity Prevention
+  # ============================================
+  - id: missing-quantity-check-constraint-item
+    patterns:
+      - pattern: |
+          CREATE TABLE "Item" (
+            ...
+            "quantity" INTEGER NOT NULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "Item" ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT "Item_quantity_check" CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+    message: "Missing database constraint: Item.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"Item\" ADD CONSTRAINT \"Item_quantity_check\" CHECK (quantity >= 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-orderitem
+    patterns:
+      - pattern: |
+          CREATE TABLE "OrderItem" (
+            ...
+            "quantity" INTEGER NOT NULL,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "OrderItem" ADD CONSTRAINT ... CHECK (quantity > 0)
+      - pattern-not: |
+          CONSTRAINT "OrderItem_quantity_check" CHECK (quantity > 0)
+      - pattern-not: |
+          CHECK (quantity > 0)
+    message: "Missing database constraint: OrderItem.quantity should have CHECK constraint to prevent negative or zero values. Add: ALTER TABLE \"OrderItem\" ADD CONSTRAINT \"OrderItem_quantity_check\" CHECK (quantity > 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-productvariant
+    patterns:
+      - pattern: |
+          CREATE TABLE "ProductVariant" (
+            ...
+            "quantity" INTEGER NOT NULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE "ProductVariant" ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT "ProductVariant_quantity_check" CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+    message: "Missing database constraint: ProductVariant.quantity should have CHECK constraint to prevent negative values. Add: ALTER TABLE \"ProductVariant\" ADD CONSTRAINT \"ProductVariant_quantity_check\" CHECK (quantity >= 0);"
+    severity: ERROR
+    languages: [sql]
+
+  - id: missing-quantity-check-constraint-generic
+    patterns:
+      - pattern: |
+          CREATE TABLE $TABLE (
+            ...
+            "quantity" INTEGER $NOTNULL $DEFAULT,
+            ...
+          )
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT $TABLE_quantity_check CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity >= 0)
+      - pattern-not: |
+          CHECK (quantity > 0)
+      - metavariable-pattern:
+          metavariable: $TABLE
+          pattern-not: InventoryLog
+    message: "Missing database constraint: Table $TABLE has quantity column without CHECK constraint. Add CHECK constraint to prevent negative values (e.g., CHECK (quantity >= 0) or CHECK (quantity > 0) depending on business logic)."
+    severity: WARNING
+    languages: [sql]
+
+  - id: prisma-quantity-field-without-constraint-note
+    patterns:
+      - pattern: |
+          quantity        Int       $DEFAULT
+      - pattern-not-inside: |
+          // CHECK constraint: quantity >= 0
+      - pattern-not-inside: |
+          // CHECK (quantity >= 0)
+      - pattern-not-inside: |
+          // @db.Check("quantity >= 0")
+    message: "Missing CHECK constraint documentation: Quantity field in Prisma schema should have a comment indicating CHECK constraint requirement. Since Prisma doesn't support CHECK constraints directly, add a migration with: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0);"
+    severity: WARNING
+    languages: [prisma]
+
+  - id: missing-quantity-check-in-migration
+    patterns:
+      - pattern: |
+          "quantity" INTEGER $NOTNULL $DEFAULT
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          ALTER TABLE $TABLE ADD CONSTRAINT ... CHECK (quantity > 0)
+      - pattern-not: |
+          CONSTRAINT ... CHECK (quantity >= 0)
+      - pattern-not: |
+          CONSTRAINT ... CHECK (quantity > 0)
+    message: "Missing CHECK constraint in migration: Quantity column created without CHECK constraint. Add constraint after table creation: ALTER TABLE \"$TABLE\" ADD CONSTRAINT \"$TABLE_quantity_check\" CHECK (quantity >= 0); (or quantity > 0 for OrderItem)."
+    severity: ERROR
+    languages: [sql]
 
   - id: insecure-random-math-random
     pattern: Math.random()
@@ -87,3 +339,283 @@ rules:
     message: "Potential data leakage: Querying user-specific data without filtering by current user. Add user_id or owner_id filter to prevent unauthorized access."
     severity: WARNING
     languages: [typescript, javascript]
+
+  # ============================================
+  # Credential Leak in Logs Prevention
+  # ============================================
+  - id: credential-leak-direct-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, { ...$DATA })
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern-either:
+            - pattern: password: $VAL
+            - pattern: token: $VAL
+            - pattern: refresh_token: $VAL
+            - pattern: access_token: $VAL
+            - pattern: authorization: $VAL
+            - pattern: cvv: $VAL
+            - pattern: credit_card: $VAL
+            - pattern: secret: $VAL
+            - pattern: api_key: $VAL
+            - pattern: apiKey: $VAL
+    message: "Credential leak risk: Directly logging sensitive fields (password, token, etc.) without redaction. Ensure logger is configured with redaction formatter. Use logger from utils/logger.ts which has redaction enabled."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: credential-leak-req-body-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, req.body)
+      - pattern: |
+          logger.$LEVEL($MSG, { body: req.body })
+      - pattern: |
+          logger.$LEVEL($MSG, { ...req.body })
+    message: "Credential leak risk: Logging req.body directly may expose passwords, tokens, and other sensitive data. Use logger with redaction or manually exclude sensitive fields."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: credential-leak-req-headers-logging
+    patterns:
+      - pattern: |
+          logger.$LEVEL($MSG, req.headers)
+      - pattern: |
+          logger.$LEVEL($MSG, { headers: req.headers })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+          }
+    message: "Credential leak risk: Logging req.headers may expose Authorization tokens. Ensure logger has redaction configured or exclude Authorization header manually."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: credential-leak-console-logging
+    patterns:
+      - pattern: |
+          console.log($DATA)
+      - pattern: |
+          console.error($DATA)
+      - pattern: |
+          console.info($DATA)
+      - pattern: |
+          console.warn($DATA)
+      - metavariable-pattern:
+          metavariable: $DATA
+          pattern-either:
+            - pattern: req.body
+            - pattern: req.headers
+            - pattern: { password: $VAL }
+            - pattern: { token: $VAL }
+            - pattern: { ...req.body }
+    message: "Credential leak risk: Using console.log/error/info/warn with sensitive data. Use logger from utils/logger.ts instead, which has redaction configured. Never use console.* for logging in production."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: logger-missing-redaction
+    patterns:
+      - pattern: |
+          winston.createLogger({
+            ...
+            format: winston.format.combine(
+              ...
+            ),
+            ...
+          })
+      - pattern-not-inside: |
+          redactSensitive()
+      - pattern-not-inside: |
+          redact
+    message: "Missing log redaction: Winston logger should include redaction formatter to mask sensitive fields (password, token, etc.) before writing to stdout or files. Add redactSensitive() formatter."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: console-transport-missing-redaction
+    patterns:
+      - pattern: |
+          new winston.transports.Console({
+            format: winston.format.combine(
+              ...
+            )
+          })
+      - pattern-not-inside: |
+          redactSensitive()
+      - pattern-not-inside: |
+          redact
+    message: "Missing console redaction: Console transport should include redaction formatter to prevent credential leaks in stdout. Add redactSensitive() before other formatters."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  # ============================================
+  # Database Schema Leak Prevention
+  # ============================================
+  - id: db-schema-leak-prisma-error
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            message: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development' || $ENV !== 'production') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: prismaError
+            - pattern: $PRISMA_ERROR
+            - pattern: err
+    message: "Database schema leak risk: Prisma/database error messages may contain table names, column names, or constraint names. Return generic error messages in production. Use error handler that sanitizes Prisma errors."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: db-schema-leak-error-message
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            error: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            error: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: err
+            - pattern: error
+            - pattern: $ERROR
+    message: "Database schema leak risk: Error messages may contain database schema information (table names, column names, SQL syntax). Return generic error messages in production."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  - id: db-schema-leak-prisma-meta
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            meta: $PRISMA_ERROR.meta,
+            ...
+          })
+      - pattern: |
+          res.status($CODE).json($PRISMA_ERROR.meta)
+    message: "Database schema leak: Prisma error meta contains database schema information (table names, column names, constraints). Never expose meta field to clients."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: missing-global-error-handler
+    patterns:
+      - pattern: |
+          const app = express()
+          ...
+      - pattern-not: |
+          app.use($ERROR_HANDLER)
+      - pattern-not: |
+          app.use(errorHandler)
+    message: "Missing global error handler: Express app should have a global error handler middleware as the last middleware to catch all errors and prevent schema leaks. Add: app.use(errorHandler);"
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: prisma-error-not-handled
+    patterns:
+      - pattern: |
+          try {
+            ...
+            await prisma.$MODEL.$METHOD(...)
+            ...
+          } catch ($ERR) {
+            ...
+            res.status($CODE).json({
+              message: $ERR.message,
+              ...
+            })
+          }
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - pattern-not-inside: |
+          config.nodeEnv === 'development'
+    message: "Prisma error not sanitized: Catching Prisma errors and returning error.message directly may leak database schema. Use global error handler or sanitize Prisma errors before returning to client."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: sql-error-exposure
+    patterns:
+      - pattern: |
+          res.status($CODE).json({
+            ...
+            message: $ERR.message,
+            ...
+          })
+      - pattern-not-inside: |
+          if ($ENV === 'development') {
+            ...
+            message: $ERR.message,
+            ...
+          }
+      - metavariable-pattern:
+          metavariable: $ERR
+          pattern-either:
+            - pattern: err
+            - pattern: error
+            - pattern: $ERROR
+    message: "SQL error exposure risk: Error messages containing SQL syntax, table names, or column names should not be exposed to clients. Return generic error messages in production."
+    severity: WARNING
+    languages: [typescript, javascript]
+
+  # ============================================
+  # Dependency Vulnerability Detection
+  # ============================================
+  - id: outdated-react-version
+    patterns:
+      - pattern: |
+          "react": "$VERSION"
+      - metavariable-pattern:
+          metavariable: $VERSION
+          pattern-not: |
+            "^19.2.0"|"^19.3.0"|"^19.4.0"|"^20.0.0"|"^18.3.0"|"^18.2.0"
+    message: "Outdated React version: React may be vulnerable to CVE-2025-66478 (React2Shell RCE). Update React to the latest patched version. Run 'npm audit fix' or update package.json."
+    severity: ERROR
+    languages: [json]
+
+  - id: outdated-nextjs-version
+    patterns:
+      - pattern: |
+          "next": "$VERSION"
+      - metavariable-pattern:
+          metavariable: $VERSION
+          pattern-not: |
+            "^16.0.10"|"^15.0.0"|"^14.0.0"
+    message: "Outdated Next.js version: Next.js may contain security vulnerabilities. Update to the latest patched version. Run 'npm audit fix' or update package.json."
+    severity: WARNING
+    languages: [json]
+
+  - id: vulnerable-dependency-pattern
+    patterns:
+      - pattern: |
+          "$PKG": "$VERSION"
+      - metavariable-pattern:
+          metavariable: $VERSION
+          pattern-either:
+            - pattern: "*"
+            - pattern: "latest"
+            - pattern: "^0.0.0"
+            - pattern: "0.0.0"
+    message: "Potentially vulnerable dependency: Using wildcard (*), latest, or 0.0.0 version may include vulnerable packages. Pin to specific versions and run 'npm audit' regularly."
+    severity: WARNING
+    languages: [json]
