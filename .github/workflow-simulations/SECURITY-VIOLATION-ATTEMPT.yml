@@ -1,0 +1,42 @@
+## SAFE DEMO: SECURITY-VIOLATION-ATTEMPT.yml
+# This file is intentionally placed under .github/workflow-simulations/
+# (not .github/workflows/) so it will NOT be picked up by GitHub Actions.
+# It contains a commented simulation of an attempted change that would
+# disable security scans. Use this for demos only — it does not affect CI.
+
+name: "SECURITY-VIOLATION-SIMULATION"
+
+# Example of steps a malicious actor might comment out or delete.
+# These steps are commented so the file remains non-executable documentation.
+
+on: [push]
+
+jobs:
+  simulate-shadow-devops:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The following security steps are intentionally shown as commented
+      # lines to simulate an attempted bypass. DO NOT UNCOMMENT OR MOVE
+      # THESE INTO .github/workflows/ in this repository.
+
+      # - name: SAST Scanning
+      #   uses: some/sast-action@v1
+      #   with:
+      #     fail-on-high: true
+
+      # - name: Snyk Vulnerability Scan
+      #   uses: snyk/actions@master
+      #   with:
+      #     args: test --all-projects
+
+      # - name: Secrets Detection
+      #   uses: github/codeql-action/analyze@v2
+      #   with:
+      #     category: "secrets"
+
+      - name: Demo: Log attempted bypass
+        run: |
+          echo "SIMULATION: a developer attempted to disable SAST, Snyk and Secrets Detection"
