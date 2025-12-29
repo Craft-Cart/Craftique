@@ -176,6 +176,8 @@ export class AnalyticsService {
   }
 
   private async getTopProducts(filter: { from: Date; to: Date }) {
+    // nosemgrep: missing-user-filter-query
+    // Analytics is admin-only data, accessed via role-based middleware
     const orderItems = await prisma.orderItem.findMany({
       where: {
         order: {
@@ -206,6 +208,8 @@ export class AnalyticsService {
   }
 
   private async getRevenueByCategory(filter: { from: Date; to: Date }) {
+    // nosemgrep: missing-user-filter-query
+    // Analytics is admin-only data, accessed via role-based middleware
     const orderItems = await prisma.orderItem.findMany({
       where: {
         order: {
@@ -241,6 +245,8 @@ export class AnalyticsService {
   }
 
   private async getTopSellingProducts() {
+    // nosemgrep: missing-user-filter-query
+    // Analytics is admin-only data, accessed via role-based middleware
     const orderItems = await prisma.orderItem.groupBy({
       by: ['item_id'],
       _sum: {
@@ -270,6 +276,8 @@ export class AnalyticsService {
   }
 
   private async getLowStockProducts() {
+    // nosemgrep: missing-user-filter-query
+    // Analytics is admin-only data, accessed via role-based middleware
     return prisma.item.findMany({
       where: {
         quantity: {
@@ -324,6 +332,8 @@ export class AnalyticsService {
   }
 
   private async getOrdersData(filter: { from: Date; to: Date }) {
+    // nosemgrep: missing-user-filter-query
+    // Analytics is admin-only data, accessed via role-based middleware
     return prisma.order.findMany({
       where: {
         created_at: {

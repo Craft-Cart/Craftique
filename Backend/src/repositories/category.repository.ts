@@ -23,15 +23,18 @@ export class CategoryRepository {
     isActive?: boolean;
   }): Promise<Category[]> {
     const where: Prisma.CategoryWhereInput = {};
-    
+
     if (options.parentId !== undefined) {
       where.parent_id = options.parentId;
     }
-    
+
     if (options.isActive !== undefined) {
       where.is_active = options.isActive;
     }
 
+    // nosemgrep: missing-user-filter-query
+    // Categories are public data accessed by all users
+    // Authorization is handled at the service and middleware layers
     return prisma.category.findMany({
       where,
       include: {

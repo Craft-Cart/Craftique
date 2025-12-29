@@ -4,8 +4,8 @@ import { config } from '../config/env';
 export const setAuthCookie = (res: Response, token: string, refreshToken?: string) => {
   res.cookie('access_token', token, {
     httpOnly: true,
-    secure: config.cookie.secure,
-    sameSite: config.cookie.sameSite,
+    secure: true,
+    sameSite: 'strict',
     domain: config.cookie.domain,
     maxAge: 24 * 60 * 60 * 1000,
     path: '/',
@@ -14,8 +14,8 @@ export const setAuthCookie = (res: Response, token: string, refreshToken?: strin
   if (refreshToken) {
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: config.cookie.secure,
-      sameSite: config.cookie.sameSite,
+      secure: true,
+      sameSite: 'strict',
       domain: config.cookie.domain,
       maxAge: 30 * 24 * 60 * 60 * 1000,
       path: '/',
