@@ -52,6 +52,8 @@ jobs:
         run: |
           docker run --rm -v "${{ github.workspace }}:/repo" zricethezav/gitleaks:latest detect \
             --source="/repo" \
+            --branch="${GITHUB_REF_NAME}" \
+            --since-commit="${{ github.event.pull_request.base.sha }}" \
             --verbose \
             --redact \
             --exit-code 1
@@ -560,7 +562,6 @@ jobs:
           name: zap-report
           path: report_html.html
           retention-days: 14
-
 
   # ============================================
   # Stage 6: Security Gate & PR Comment
