@@ -38,6 +38,23 @@ rules:
     severity: ERROR
     languages: [typescript, javascript]
 
+  - id: insecure-jwt-verification
+    patterns:
+      - pattern: jwt.verify($TOKEN, $SECRET)
+      - pattern-not-inside: |
+          algorithms: ['HS256']
+      - pattern-not-inside: |
+          algorithms: ['RS256']
+    message: "Insecure JWT verification: jwt.verify() should specify algorithms explicitly (e.g., algorithms: ['HS256'] or ['RS256']) to prevent algorithm confusion attacks."
+    severity: ERROR
+    languages: [typescript, javascript]
+
+  - id: manual-jwt-decoding
+    pattern: Buffer.from($PAYLOAD, 'base64').toString()
+    message: "Manual JWT decoding detected: Avoid manual JWT decoding. Use proper JWT verification libraries with algorithm specification to prevent security vulnerabilities."
+    severity: WARNING
+    languages: [typescript, javascript]
+
   - id: missing-ownership-check
     patterns:
       - pattern: |
