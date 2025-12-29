@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 export function slugify(text: string): string {
   return text
     .toString()
@@ -12,7 +14,7 @@ export function slugify(text: string): string {
 
 export function generateOrderNumber(): string {
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  return `ORD-${timestamp}-${random}`;
+  const random = crypto.randomBytes(2).readUInt16BE(0) % 10000;
+  return `ORD-${timestamp}-${random.toString().padStart(4, '0')}`;
 }
 

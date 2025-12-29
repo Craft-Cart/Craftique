@@ -4,6 +4,7 @@ import { UserRepository } from '../repositories/user.repository';
 import { ConflictError, AuthenticationError } from '../utils/errors';
 import { logger } from '../utils/logger';
 import { UserRole } from '@prisma/client';
+import crypto from 'crypto';
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -601,8 +602,7 @@ export class AuthService {
   }
 
   private generateState(): string {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
+    return crypto.randomBytes(32).toString('hex');
   }
 
   private async getAuth0ManagementToken(): Promise<string> {
