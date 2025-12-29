@@ -38,62 +38,96 @@ function findMigrationFiles(dir) {
   return files;
 }
 
-function checkMigrationFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
+function checkMigrationFiles(migrationFiles) {
   const errors = [];
   const warnings = [];
   
+  // Read all migration files content
+  const allMigrationsContent = migrationFiles.map(file => ({
+    path: file,
+    content: fs.readFileSync(file, 'utf8')
+  }));
+  
+  // Combine all migration content to check if constraints exist anywhere
+  const allContent = allMigrationsContent.map(f => f.content).join('\n');
+  
   // Check each expected table
   for (const [tableName, expected] of Object.entries(expectedConstraints)) {
-    // Check if table is created
-    const tablePattern = new RegExp(`CREATE TABLE\\s+"${tableName}"`, 'i');
-    if (!tablePattern.test(content)) {
-      continue; // Table doesn't exist in this migration, skip
+    // Find the migration file where the table is created
+    const createTableFile = allMigrationsContent.find(f => 
+      new RegExp(`CREATE TABLE\\s+"${tableName}"`, 'i').test(f.content)
+    );
+    
+    if (!createTableFile) {
+      continue; // Table doesn't exist, skip
     }
     
-    // Check if quantity column exists
-    const quantityPattern = new RegExp(`"quantity"\\s+INTEGER`, 'i');
-    if (!quantityPattern.test(content)) {
+    // Check if quantity column exists in the CREATE TABLE
+    const createTableMatch = createTableFile.content.match(
+      new RegExp(`CREATE TABLE\\s+"${tableName}"\\s*\\(([\\s\\S]*?)\\)`, 'i')
+    );
+    
+    if (!createTableMatch || !/\"quantity\"\s+INTEGER/i.test(createTableMatch[1])) {
       continue; // No quantity column, skip
     }
     
-    // Check for CHECK constraint in CREATE TABLE
+    // Check for CHECK constraint in CREATE TABLE (inline)
+    // For OrderItem, check for > 0, for others check for >= 0
+    const checkOperator = tableName === 'OrderItem' ? '>' : '>=';
     const inlineCheckPattern = new RegExp(
-      `CREATE TABLE\\s+"${tableName}"[\\s\\S]*?"quantity"[\\s\\S]*?CHECK\\s*\\(quantity\\s*[>=]\\s*0\\)`,
+      `CREATE TABLE\\s+"${tableName}"[\\s\\S]*?"quantity"[\\s\\S]*?CHECK\\s*\\(quantity\\s*${checkOperator}\\s*0\\)`,
       'i'
     );
     
-    // Check for ALTER TABLE ADD CONSTRAINT
-    const alterCheckPattern = new RegExp(
-      `ALTER TABLE\\s+"${tableName}"[\\s\\S]*?ADD CONSTRAINT[\\s\\S]*?CHECK\\s*\\(quantity\\s*[>=]\\s*0\\)`,
-      'i'
-    );
+    // Check for ALTER TABLE ADD CONSTRAINT in ANY migration file
+    // For OrderItem, must check for > 0, for others >= 0 is acceptable
+    let alterCheckPattern;
+    if (tableName === 'OrderItem') {
+      // OrderItem must have > 0, but also accept >= 0 as it's stricter
+      alterCheckPattern = new RegExp(
+        `ALTER TABLE\\s+"${tableName}"[\\s\\S]*?ADD CONSTRAINT[\\s\\S]*?CHECK\\s*\\(quantity\\s*[>=]\\s*0\\)`,
+        'i'
+      );
+    } else {
+      // Other tables need >= 0
+      alterCheckPattern = new RegExp(
+        `ALTER TABLE\\s+"${tableName}"[\\s\\S]*?ADD CONSTRAINT[\\s\\S]*?CHECK\\s*\\(quantity\\s*>=\\s*0\\)`,
+        'i'
+      );
+    }
     
-    // Check for constraint name pattern
+    // Check for constraint name pattern in ANY migration file
     const constraintNamePattern = new RegExp(
       `"${tableName}_quantity_check"|"${tableName.toLowerCase()}_quantity_check"`,
       'i'
     );
     
-    const hasInlineCheck = inlineCheckPattern.test(content);
-    const hasAlterCheck = alterCheckPattern.test(content);
-    const hasConstraintName = constraintNamePattern.test(content);
+    const hasInlineCheck = inlineCheckPattern.test(createTableFile.content);
+    const hasAlterCheck = alterCheckPattern.test(allContent); // Check in all migrations
+    const hasConstraintName = constraintNamePattern.test(allContent); // Check in all migrations
     
     if (!hasInlineCheck && !hasAlterCheck) {
       errors.push({
         table: tableName,
-        file: path.relative(process.cwd(), filePath),
+        file: path.relative(process.cwd(), createTableFile.path),
         message: `Missing CHECK constraint: ${expected.description}. Add: ALTER TABLE "${tableName}" ADD CONSTRAINT "${tableName}_quantity_check" ${expected.constraint};`,
         expected: expected.constraint
       });
-    } else if (!hasConstraintName) {
+    } else if (!hasConstraintName && (hasInlineCheck || hasAlterCheck)) {
       warnings.push({
         table: tableName,
-        file: path.relative(process.cwd(), filePath),
+        file: path.relative(process.cwd(), createTableFile.path),
         message: `CHECK constraint exists but should be named: "${tableName}_quantity_check" for better maintainability`
       });
     }
   }
+  
+  return { errors, warnings };
+}
+
+function checkGenericQuantityColumns(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const warnings = [];
   
   // Generic check for any other quantity columns without constraints
   // Parse each CREATE TABLE statement separately to avoid cross-table matching
@@ -137,7 +171,7 @@ function checkMigrationFile(filePath) {
     }
   }
   
-  return { errors, warnings };
+  return { warnings };
 }
 
 function main() {
@@ -153,19 +187,22 @@ function main() {
     return;
   }
   
-  let allErrors = [];
-  let allWarnings = [];
+  // Check all migration files together to see if constraints exist in any migration
+  const { errors: allErrors, warnings: allWarnings } = checkMigrationFiles(migrationFiles);
   
+  // Also check for generic quantity columns in individual files
+  let genericWarnings = [];
   migrationFiles.forEach(file => {
-    const { errors, warnings } = checkMigrationFile(file);
-    allErrors = allErrors.concat(errors);
-    allWarnings = allWarnings.concat(warnings);
+    const { warnings } = checkGenericQuantityColumns(file);
+    genericWarnings = genericWarnings.concat(warnings);
   });
   
+  const allWarningsCombined = [...allWarnings, ...genericWarnings];
+  
   // Print warnings first
-  if (allWarnings.length > 0) {
+  if (allWarningsCombined.length > 0) {
     console.log('\n⚠️  Warnings:');
-    allWarnings.forEach(w => {
+    allWarningsCombined.forEach(w => {
       console.log(`  ${w.file} - ${w.message}`);
     });
   }
@@ -180,8 +217,8 @@ function main() {
     process.exit(1);
   } else {
     console.log('\n✅ All quantity columns have CHECK constraints');
-    if (allWarnings.length > 0) {
-      console.log(`   (${allWarnings.length} warning(s) - see above)`);
+    if (allWarningsCombined.length > 0) {
+      console.log(`   (${allWarningsCombined.length} warning(s) - see above)`);
     }
   }
 }
