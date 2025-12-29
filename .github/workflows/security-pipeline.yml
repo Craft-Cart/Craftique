@@ -78,18 +78,19 @@ jobs:
         uses: semgrep/semgrep-action@v1
         with:
           config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
-          # Use a standard filename and ensure SARIF isn't forced if you want JSON
-          output: semgrep-custom-results.json
+          baseline-ref: ""
+          # Use the environment variable to force it onto the runner's disk
+          output: ${{ github.workspace }}/semgrep-custom-results.json
         continue-on-error: true
 
       - name: Upload Custom Semgrep Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: semgrep-results # Keep the name simple
+          name: custom-semgrep-results
+          # Make sure this matches exactly
           path: semgrep-custom-results.json
-          # This prevents the step from failing if Semgrep didn't create a file
-          if-no-files-found: warn
+          retention-days: 30
 
       - name: Run Trivy FS Scan (SCA + IaC)
         uses: aquasecurity/trivy-action@master
