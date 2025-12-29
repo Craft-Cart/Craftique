@@ -3,6 +3,8 @@ import { ManagementClient } from 'auth0';
 import { config } from '../config/env';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
 import { logger } from '../utils/logger';
+import jwt from 'jsonwebtoken';
+import jwksRsa from 'jwks-rsa';
 
 // Extend Express Request to include user
 declare global {
@@ -24,6 +26,14 @@ const managementClient = new ManagementClient({
   domain: config.auth0.domain,
   clientId: config.auth0.clientId,
   clientSecret: config.auth0.clientSecret,
+});
+
+// JWKS client for JWT verification
+const jwksClient = jwksRsa({
+  jwksUri: `https://${config.auth0.domain}/.well-known/jwks.json`,
+  cache: true,
+  rateLimit: true,
+  jwksRequestsPerMinute: 5,
 });
 
 // Auth0 Next.js SDK cookie names (from SDK documentation)
@@ -133,37 +143,49 @@ const extractToken = (req: Request): string | null => {
   return null;
 };
 
-// Verify JWT token with basic validation
-const verifyToken = (token: string): any => {
-  try {
-    // For now, decode without JWKS verification (temporary)
-    // TODO: Implement proper JWKS verification with Auth0 SDK
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      throw new Error('Invalid token format');
-    }
+// Verify JWT token with proper JWKS verification
+const verifyToken = (token: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    // Get the signing key from JWKS
+    const getKey = (header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) => {
+      jwksClient.getSigningKey(header.kid, (err, key) => {
+        if (err) {
+          logger.error('Failed to get signing key', { error: err.message });
+          return callback(err);
+        }
 
-    // Decode payload
-    const payload = JSON.parse(
-      Buffer.from(parts[1], 'base64').toString()
+        if (!key) {
+          logger.error('No signing key found');
+          return callback(new Error('No signing key found'));
+        }
+
+        const signingKey = key.getPublicKey();
+        callback(null, signingKey);
+      });
+    };
+
+    // Verify the JWT
+    jwt.verify(
+      token,
+      getKey,
+      {
+        audience: config.auth0.audience,
+        issuer: config.auth0.issuer,
+        algorithms: ['RS256'], // Auth0 uses RS256
+      },
+      (err, decoded) => {
+        if (err) {
+          logger.error('JWT verification failed', {
+            error: err.message,
+            tokenIssuer: err instanceof jwt.JsonWebTokenError ? 'invalid' : 'unknown',
+          });
+          return reject(new AuthenticationError('Invalid or expired token'));
+        }
+
+        resolve(decoded);
+      }
     );
-
-    // Check token expiration
-    const now = Math.floor(Date.now() / 1000);
-    if (payload.exp && payload.exp < now) {
-      throw new Error('Token has expired');
-    }
-
-    return payload;
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    logger.error('Token verification failed', {
-      error: errorMessage,
-      stack: errorStack,
-    });
-    throw error;
-  }
+  });
 };
 
 // Middleware to verify JWT token
@@ -176,7 +198,7 @@ export const verifyJWT = async (req: Request, _res: Response, next: NextFunction
     }
 
     // Verify and decode token
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
 
     // Log decoded token info for debugging
     logger.info('Authentication successful', {
