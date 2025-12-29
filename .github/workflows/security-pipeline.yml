@@ -453,6 +453,8 @@ jobs:
     steps:
       - name: Fix permissions for prisma-init
         run: sudo chown -R $USER:$USER Backend/prisma-init || true
+      - name: Remove temp folder
+        run: rm -rf Backend/prisma-init || true
       - name: Checkout code
         uses: actions/checkout@v4
         with:
