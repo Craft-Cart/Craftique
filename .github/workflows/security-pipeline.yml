@@ -208,6 +208,10 @@ jobs:
         working-directory: Backend
         run: npm ci
 
+      - name: Check validation middleware on write routes
+        working-directory: Backend
+        run: npm run check-validation
+
       - name: Generate Prisma Client
         working-directory: Backend
         run: npx prisma generate
