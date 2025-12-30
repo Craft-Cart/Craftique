@@ -80,7 +80,7 @@ jobs:
           config: .semgrep.yml,p/security-audit,p/owasp-top-ten,p/nodejs,p/typescript
           baseline-ref: ""
           output: semgrep-custom-results.json
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Upload Custom Semgrep Results
         if: always()
@@ -97,7 +97,7 @@ jobs:
           scan-ref: "."
           format: "table"
           severity: "CRITICAL,HIGH"
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Setup Node.js for audit
         uses: actions/setup-node@v4
@@ -140,7 +140,7 @@ jobs:
           format: "json"
           output: "license-report.json"
           scanners: "license"
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Generate License Compliance Report
         if: always()
@@ -208,7 +208,7 @@ jobs:
               fi
             done
           fi
-        continue-on-error: true # Set to false to enforce license compliance
+        continue-on-error: false # Set to false to enforce license compliance
 
   # ============================================
   # Stage 3: Build & Test (Combined Backend + Frontend)
@@ -390,7 +390,7 @@ jobs:
           format: "json"
           output: "backend-container-licenses.json"
           scanners: "license"
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Scan Frontend container licenses
         uses: aquasecurity/trivy-action@master
@@ -399,7 +399,7 @@ jobs:
           format: "json"
           output: "frontend-container-licenses.json"
           scanners: "license"
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Analyze Container License Compliance
         if: always()
@@ -498,7 +498,7 @@ jobs:
         with:
           target: "http://localhost:8000/health"
           allow_issue_writing: false
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
@@ -687,7 +687,7 @@ jobs:
           subject-digest: ${{ steps.build-backend.outputs.digest }}
           sbom-path: backend-sbom.json
           push-to-registry: true
-        continue-on-error: true
+        continue-on-error: false
 
       # ========== Frontend Image ==========
       - name: Build and push Frontend
@@ -728,7 +728,7 @@ jobs:
           subject-digest: ${{ steps.build-frontend.outputs.digest }}
           sbom-path: frontend-sbom.json
           push-to-registry: true
-        continue-on-error: true
+        continue-on-error: false
 
       # ========== Outputs for GitOps ==========
       - name: Set image outputs
