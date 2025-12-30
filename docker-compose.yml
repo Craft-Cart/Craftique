@@ -11,6 +11,7 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./Backend/prisma:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     healthcheck:
@@ -20,6 +21,20 @@ services:
       retries: 5
     networks:
       - craftique-network
+
+  db-init:
+    image: postgres:15-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./Backend/prisma:/docker-entrypoint-initdb.d:ro
+    entrypoint: ["sh", "-c"]
+    command: >
+      "echo 'Waiting for DB...' &&
+       until pg_isready -h postgres -U craftique; do sleep 2; done &&
+       psql -h postgres -U craftique -d craftique -f /docker-entrypoint-initdb.d/setup-roles.sql
+      "
 
   # Backend API
   backend:
@@ -32,7 +47,7 @@ services:
       NODE_ENV: production
       PORT: 8000
       API_BASE_URL: http://localhost:8000/api/v1
-      DATABASE_URL: postgresql://craftique:craftique_password_change_in_production@postgres:5432/craftique?schema=public
+      DATABASE_URL: postgresql://craftique_app:craftique_app_password_change_in_production@postgres:5432/craftique?schema=public
       # Auth0 - Set these in .env or override
       AUTH0_DOMAIN: ${AUTH0_DOMAIN:-your-tenant.auth0.com}
       AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:-}
@@ -65,8 +80,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     networks:
       - craftique-network
     volumes:

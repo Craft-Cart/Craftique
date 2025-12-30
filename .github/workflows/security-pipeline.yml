@@ -210,6 +210,42 @@ jobs:
           fi
         continue-on-error: true # Set to false to enforce license compliance
 
+      - name: Verify Database Role Setup
+        run: |
+          echo "## 🔐 Database Role Setup Verification" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Check if setup-roles.sql exists
+          if [ ! -f "Backend/prisma/setup-roles.sql" ]; then
+            echo "❌ ERROR: setup-roles.sql file not found" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ setup-roles.sql file exists" >> $GITHUB_STEP_SUMMARY
+
+          # Check if it creates craftique_app role
+          if ! grep -q "CREATE ROLE craftique_app" Backend/prisma/setup-roles.sql; then
+            echo "❌ ERROR: setup-roles.sql does not create craftique_app role" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ setup-roles.sql creates craftique_app role" >> $GITHUB_STEP_SUMMARY
+
+          # Check if it grants proper permissions
+          if ! grep -q "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES" Backend/prisma/setup-roles.sql; then
+            echo "❌ ERROR: setup-roles.sql does not grant CRUD permissions" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ setup-roles.sql grants SELECT, INSERT, UPDATE, DELETE permissions" >> $GITHUB_STEP_SUMMARY
+
+          # Check if it revokes dangerous permissions
+          if ! grep -q "REVOKE CREATE ON SCHEMA" Backend/prisma/setup-roles.sql; then
+            echo "❌ ERROR: setup-roles.sql does not revoke CREATE permission" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ setup-roles.sql revokes CREATE permission on schema" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Database role setup verification passed!** 🎉" >> $GITHUB_STEP_SUMMARY
+
   # ============================================
   # Stage 3: Build & Test (Combined Backend + Frontend)
   # Single job with parallel steps where possible
@@ -454,10 +490,24 @@ jobs:
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 5s --health-timeout 3s --health-retries 5
+        volumes:
+          - /tmp/prisma-init:/docker-entrypoint-initdb.d
 
     steps:
+      - name: Fix permissions for prisma-init
+        run: sudo chown -R $USER:$USER /tmp/prisma-init || true
+      - name: Remove temp folder
+        run: rm -rf /tmp/prisma-init || true
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          clean: true
+
+      - name: Prepare prisma init folder
+        run: |
+          mkdir -p /tmp/prisma-init
+          cp -r Backend/prisma/* /tmp/prisma-init/
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -475,7 +525,7 @@ jobs:
           npx prisma db push --accept-data-loss
           NODE_ENV=production node dist/server.js &
         env:
-          DATABASE_URL: postgresql://craftique:test_password@localhost:5432/craftique?schema=public
+          DATABASE_URL: postgresql://craftique_app:craftique_app_password_change_in_production@postgres:5432/craftique?schema=public
           PORT: 8000
           JWT_SECRET: test-secret
           COOKIE_SECRET: test-cookie
@@ -492,6 +542,56 @@ jobs:
           echo "Waiting for server to start..."
           timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done' || exit 1
           echo "Server is ready!"
+
+      - name: Check Database Role Permissions
+        run: |
+          echo "## 🔐 Database Role Permission Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          ROLE_EXISTS=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT 1 FROM pg_roles WHERE rolname = 'craftique_app';")
+          if [ -z "$ROLE_EXISTS" ]; then
+            echo "❌ ERROR: craftique_app role does not exist" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ craftique_app role exists" >> $GITHUB_STEP_SUMMARY
+
+          CONNECT_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_database_privilege('craftique_app', 'craftique', 'CONNECT');")
+          if [ "$CONNECT_PERM" != "t" ]; then
+            echo "❌ ERROR: craftique_app lacks CONNECT permission" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ craftique_app has CONNECT permission" >> $GITHUB_STEP_SUMMARY
+
+          USAGE_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_schema_privilege('craftique_app', 'public', 'USAGE');")
+          if [ "$USAGE_PERM" != "t" ]; then
+            echo "❌ ERROR: craftique_app lacks USAGE permission on public schema" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ craftique_app has USAGE permission on public schema" >> $GITHUB_STEP_SUMMARY
+
+          TABLE_PERMS=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "
+            SELECT
+              CASE WHEN has_table_privilege('craftique_app', 'public.\"User\"', 'SELECT') THEN 1 ELSE 0 END +
+              CASE WHEN has_table_privilege('craftique_app', 'public.\"User\"', 'INSERT') THEN 1 ELSE 0 END +
+              CASE WHEN has_table_privilege('craftique_app', 'public.\"User\"', 'UPDATE') THEN 1 ELSE 0 END +
+              CASE WHEN has_table_privilege('craftique_app', 'public.\"User\"', 'DELETE') THEN 1 ELSE 0 END
+            AS total_perms;
+          ")
+          if [ "$TABLE_PERMS" -lt 4 ]; then
+            echo "❌ ERROR: craftique_app lacks full CRUD permissions on tables" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ craftique_app has full CRUD permissions on tables" >> $GITHUB_STEP_SUMMARY
+
+          CREATE_PERM=$(psql postgresql://craftique:test_password@localhost:5432/craftique -t -c "SELECT has_schema_privilege('craftique_app', 'public', 'CREATE');")
+          if [ "$CREATE_PERM" = "t" ]; then
+            echo "❌ ERROR: craftique_app should NOT have CREATE permission on schema" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          echo "✅ craftique_app correctly lacks CREATE permission" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Database role security check passed!** 🎉" >> $GITHUB_STEP_SUMMARY
 
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
