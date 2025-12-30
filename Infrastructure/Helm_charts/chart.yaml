@@ -1,0 +1,22 @@
+apiVersion: v2
+name: my-infrastructure
+description: A Helm chart for Ingress, Cert-Manager, and Postgres
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+dependencies:
+  # 1. Ingress NGINX
+  - name: ingress-nginx
+    version: 4.10.1
+    repository: https://kubernetes.github.io/ingress-nginx
+
+  # 2. Cert-Manager
+  - name: cert-manager
+    version: v1.14.5
+    repository: https://charts.jetstack.io
+
+  # 3. Bitnami Postgres
+  - name: postgresql
+    version: 15.5.7
+    repository: https://charts.bitnami.com/bitnami
